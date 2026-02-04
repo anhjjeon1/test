@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini 3.0 긴급 복구 도구</title>
+    <style>
+        :root { --primary: #4285f4; --bg: #f8f9fa; --text: #202124; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; width: 100%; max-width: 550px; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        input, select, button { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        button:hover { background: #174ea6; transform: translateY(-1px); }
+        #log { background: #1e1e1e; color: #dcdcdc; padding: 20px; border-radius: 8px; min-height: 250px; white-space: pre-wrap; font-family: 'Consolas', monospace; font-size: 14px; margin-top: 20px; border-left: 5px solid #4285f4; }
+        .err-text { color: #ff6b6b; }
+        .ok-text { color: #51cf66; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🐸 Gemini 3.0 연결 테스트</h2>
+    <p style="font-size: 0.9em; color: #5f6368;">유튜브에서 보신 최신 모델 정보를 반영한 복구 코드입니다.</p>
+    
+    <label>API Key</label>
+    <input type="password" id="apiKey" placeholder="AI Studio에서 발급받은 키를 입력하세요">
+    
+    <label>최신 모델 선택 (Gemini 3.0)</label>
+    <select id="modelName">
+        <option value="gemini-3-flash-preview">Gemini 3 Flash (추천: 빠름/안정적)</option>
+        <option value="gemini-3-pro-preview">Gemini 3 Pro (고성능 추론)</option>
+        <option value="gemini-1.5-flash">Gemini 1.5 Flash (이전 세대 호환)</option>
+    </select>
+
+    <button onclick="runTest()">⚡ 즉시 진단 및 연결 시도</button>
+
+    <div id="log">진단 대기 중...</div>
+</div>
+
+<script>
+    async function runTest() {
+        const apiKey = document.getElementById('apiKey').value;
+        const model = document.getElementById('modelName').value;
+        const logBox = document.getElementById('log');
+
+        if (!apiKey) { alert("API 키를 넣어주세요!"); return; }
+
+        logBox.innerHTML = `🚀 [진단 시작] Gemini 3.0 환경 분석 중...\n`;
+        logBox.innerHTML += `📡 모델: ${model}\n`;
+
+        // API 버전 설정: Gemini 3는 현재 v1beta에서 가장 잘 작동합니다.
+        const apiVersion = "v1beta";
+        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
+
+        try {
+            const startTime = Date.now();
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: "Gemini 3.0 연결 성공했니? 짧게 대답해줘." }] }]
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errMsg = data.error?.message || "알 수 없는 에러";
+                logBox.innerHTML += `\n<span class="err-text">❌ 연결 실패 (HTTP ${response.status})</span>\n`;
+                logBox.innerHTML += `⚠️ 원인: ${errMsg}\n`;
+                
+                if(errMsg.includes("not found")) {
+                    logBox.innerHTML += `💡 조치: 모델명이 아직 해당 계정에 활성화되지 않았을 수 있습니다. 다른 모델을 선택해 보세요.`;
+                }
+                return;
+            }
+
+            // Gemini 3.0 응답 구조 파싱
+            const answer = data.candidates[0].content.parts[0].text;
+            const endTime = Date.now();
+            
+            logBox.innerHTML += `<span class="ok-text">✅ 연결 성공! (${endTime - startTime}ms)</span>\n\n`;
+            logBox.innerHTML += `🤖 <b>Gemini 응답:</b>\n"${answer}"\n\n`;
+            logBox.innerHTML += `<span class="ok-text">🎉 축하합니다! 이제 기존 앱의 모델명을 '${model}'로 수정하시면 됩니다.</span>`;
+
+        } catch (error) {
+            logBox.innerHTML += `\n<span class="err-text">❌ 네트워크 오류: ${error.message}</span>`;
+        }
+    }
+</script>
+
+</body>
+</html>
