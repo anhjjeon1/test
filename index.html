@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>청개구리 사전점검 AI앱 v18.3S</title>
+<title>청개구리 사전점검 AI앱 v18.4S</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;800;900&family=Outfit:wght@600;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -35,7 +35,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 .tag-free{background:var(--ac);color:#fff}
 .tag-v{background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.15);cursor:pointer;backdrop-filter:blur(6px)}
 .tag-v.dev{background:var(--pu);box-shadow:0 0 10px rgba(124,58,237,.5)}
-/* Mode Checkbox Bar (below header) */
 .mode-bar-out{display:flex;gap:6px;padding:6px 8px;background:var(--card);border-bottom:1px solid var(--bl)}
 .mode-ck{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;cursor:pointer;transition:var(--tr);border:1.5px solid var(--bd);background:var(--bg);flex:1;justify-content:center}
 .mode-ck:hover{border-color:var(--pl)}
@@ -49,7 +48,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 .mode-ck.active-pro .mc-lb{color:var(--pu)}
 .mode-ck.active-pro .mc-ic{color:var(--pu)}
 
-/* Status */
 .st{display:flex;align-items:center;justify-content:space-between;padding:8px 10px}
 .st-chip{display:flex;align-items:center;gap:7px;background:var(--card);padding:7px 12px;border-radius:30px;font-size:.75rem;font-weight:600;color:var(--ts);box-shadow:0 1px 3px rgba(0,0,0,.04);border:1px solid var(--bl)}
 .st-dot{width:7px;height:7px;border-radius:50%;background:var(--pl);animation:pulse 2s infinite}
@@ -57,7 +55,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .st-help{display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--bd);padding:7px 12px;border-radius:30px;font-size:.75rem;font-weight:700;color:var(--ts);cursor:pointer}
 
-/* Steps */
 .steps{display:flex;align-items:center;justify-content:center;gap:0;padding:4px 10px 6px}
 .sn{width:28px;height:28px;border-radius:50%;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;background:var(--bl);color:var(--th);transition:var(--tr);flex-shrink:0}
 .sn.on{background:var(--p);color:#fff;box-shadow:0 0 0 3px var(--pg)}
@@ -65,12 +62,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 .sl{height:2px;width:32px;background:var(--bl);transition:var(--tr)}
 .sl.ok{background:var(--pl)}
 
-/* Section */
 .sec{background:var(--card);margin:0 6px 6px;border-radius:16px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid var(--bl)}
 .sec-t{font-size:.8rem;font-weight:800;color:var(--ts);margin-bottom:10px;display:flex;align-items:center;gap:7px}
 .sec-t .n{background:var(--p);color:#fff;width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:900}
 
-/* Inputs */
 .ig{margin-bottom:9px}
 .ig:last-child{margin-bottom:0}
 .il{font-size:.72rem;font-weight:700;color:var(--th);margin-bottom:5px;display:flex;align-items:center;gap:4px}
@@ -82,7 +77,27 @@ textarea.if{resize:none;height:85px;line-height:1.6}
 .row{display:flex;gap:9px}
 .row>*{flex:1}
 
-/* Photo */
+/* ===== Custom Room Selector: 2-Column Grid ===== */
+.cd-wrap{width:100%}
+.cd-btn{width:100%;padding:9px 11px;font-size:.85rem;border:1.5px solid var(--bd);border-radius:10px;background:#FAFBFC;color:var(--tx);font-family:inherit;transition:var(--tr);outline:none;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between}
+.cd-btn:focus,.cd-btn.open{border-color:var(--pl);background:#fff;box-shadow:0 0 0 3px var(--pg)}
+.cd-btn .cd-arrow{font-size:.6rem;color:var(--th);transition:transform .2s}
+.cd-btn.open .cd-arrow{transform:rotate(180deg)}
+.cd-btn .cd-placeholder{color:var(--th)}
+.cd-grid{display:none;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;animation:cdOpen .2s ease-out}
+.cd-grid.show{display:grid}
+@keyframes cdOpen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.cd-item{display:flex;align-items:center;gap:6px;padding:9px 10px;border:1.5px solid var(--bd);border-radius:10px;background:#FAFBFC;cursor:pointer;transition:all .15s;user-select:none;-webkit-tap-highlight-color:transparent}
+.cd-item:active{transform:scale(.97)}
+.cd-item .cd-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.cd-item .cd-radio::after{content:'';width:9px;height:9px;border-radius:50%;background:transparent;transition:all .15s}
+.cd-item.selected{border-color:var(--pl);background:var(--pg)}
+.cd-item.selected .cd-radio{border-color:var(--p)}
+.cd-item.selected .cd-radio::after{background:var(--p)}
+.cd-item.selected .cd-label{color:var(--p);font-weight:800}
+.cd-item .cd-label{font-size:.88rem;font-weight:600;color:var(--ts)}
+/* ===== End Custom Room Selector ===== */
+
 .pg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pc{aspect-ratio:3/4;border-radius:var(--r);position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;overflow:hidden;transition:var(--tr)}
 .pc:active{transform:scale(.98)}
@@ -96,12 +111,10 @@ textarea.if{resize:none;height:85px;line-height:1.6}
 .pp{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;z-index:10;background:#fff;border-radius:var(--r)}
 .rb{position:absolute;bottom:7px;right:7px;background:rgba(0,0,0,.6);color:#fff;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:16px;z-index:15;display:none;backdrop-filter:blur(4px)}
 
-/* AI Badge */
 .ai-b{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--p),var(--pl));color:#fff;padding:2px 9px;border-radius:5px;font-size:.68rem;font-weight:700}
 .af{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px}
 .af-l{font-size:.66rem;font-weight:700;color:var(--th);margin-bottom:3px}
 
-/* Agreement */
 .ag{background:var(--wrb);border:1px solid #FEEBC8;border-radius:10px;padding:10px 12px;margin-top:10px}
 .ag-t{font-size:.75rem;font-weight:800;color:#C05621;margin-bottom:3px;display:flex;align-items:center;gap:5px}
 .ag-tx{font-size:.66rem;color:var(--ts);line-height:1.5;margin-bottom:7px}
@@ -109,13 +122,11 @@ textarea.if{resize:none;height:85px;line-height:1.6}
 .ck input{width:18px;height:18px;accent-color:var(--p);cursor:pointer;flex-shrink:0}
 .ck label{font-size:.8rem;font-weight:700;cursor:pointer}
 
-/* Save Button */
 .btn-sv{width:100%;padding:11px;margin-top:10px;border:none;border-radius:var(--r);font-size:.88rem;font-weight:800;cursor:pointer;transition:var(--tr);display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit}
 .btn-sv.ok{background:var(--p);color:#fff;box-shadow:0 4px 14px rgba(10,107,92,.3)}
 .btn-sv.ok:active{transform:translateY(2px);box-shadow:none}
 .btn-sv.off{background:var(--bd);color:var(--th);cursor:not-allowed}
 
-/* List */
 .ls{padding:0 6px;margin-top:8px}
 .lh{display:flex;justify-content:space-between;align-items:center;background:var(--card);padding:14px;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid var(--bl);margin-bottom:10px}
 .lh-l{display:flex;align-items:center;gap:9px}
@@ -143,7 +154,6 @@ textarea.if{resize:none;height:85px;line-height:1.6}
 .dc-wk{font-size:.75rem;font-weight:700;color:var(--p);margin-bottom:4px}
 .dc-dt{font-size:.82rem;color:var(--ts);line-height:1.6;white-space:pre-wrap}
 
-/* Bottom Actions */
 .ba{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;padding:0 6px;margin-top:12px}
 .ab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px 6px;border:none;border-radius:var(--r);cursor:pointer;font-family:inherit;transition:var(--tr);text-decoration:none}
 .ab:active{transform:scale(.96)}
@@ -153,12 +163,10 @@ textarea.if{resize:none;height:85px;line-height:1.6}
 .ab.rv{background:var(--pub)}.ab.rv .ab-ic{background:linear-gradient(135deg,#7C3AED,#A78BFA)}.ab.rv .ab-tx{color:var(--pu)}
 .ab.cs{background:#FFF7ED}.ab.cs .ab-ic{background:linear-gradient(135deg,var(--ac),#FF8F5E)}.ab.cs .ab-tx{color:var(--ac)}
 
-/* Footer */
 .ft{text-align:center;padding:18px 10px;margin-top:24px;border-top:1px solid var(--bl)}
 .ft-b{font-size:.8rem;font-weight:800;margin-bottom:3px}
 .ft-i{font-size:.68rem;color:var(--th);line-height:1.5}
 
-/* Modal */
 .mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(5px);padding:20px}
 .mo.show{display:flex}
 .mo-b{background:#fff;width:100%;max-width:390px;border-radius:22px;padding:24px 20px;box-shadow:0 8px 40px rgba(0,0,0,.1);animation:mp .3s cubic-bezier(.34,1.56,.64,1);max-height:85vh;overflow-y:auto}
@@ -172,7 +180,6 @@ textarea.if{resize:none;height:85px;line-height:1.6}
 .nt b{color:#C05621}
 .btn-f{width:100%;padding:13px;border:none;border-radius:var(--r);background:linear-gradient(135deg,var(--pu),#A78BFA);color:#fff;font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(124,58,237,.3)}
 
-/* Chat */
 .cf{position:fixed;bottom:18px;right:18px;width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--p),var(--pl));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;z-index:998;box-shadow:0 4px 18px rgba(10,107,92,.35);border:none}
 .cw{position:fixed;bottom:80px;right:14px;width:300px;height:420px;background:#fff;border-radius:22px;box-shadow:0 8px 40px rgba(0,0,0,.1);z-index:999;display:none;flex-direction:column;overflow:hidden;border:1px solid var(--bd);animation:su .3s ease-out}
 .cw.show{display:flex}
@@ -187,11 +194,9 @@ textarea.if{resize:none;height:85px;line-height:1.6}
 .qb{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px;border-radius:10px;font-size:.78rem;font-weight:600;cursor:pointer;text-align:center;font-family:inherit}
 .qb:active{background:var(--p);color:#fff;border-color:var(--p)}
 
-/* Storage indicator */
 .sg{display:flex;align-items:center;gap:5px;font-size:.68rem;color:var(--th);padding:2px 8px}
 .sg i{color:var(--pl)}
 
-/* Print */
 @media print{
   .app{max-width:100%;box-shadow:none;padding-bottom:0}
   .hd,.st,.steps,.sec,.ba,.ft,.cf,.cw,.dc-act,.mode-bar,.mode-bar-out,.sg{display:none!important}
@@ -209,7 +214,6 @@ input[type="file"]{display:none}
 <div class="app">
 <div id="ptitle" style="display:none"></div>
 
-<!-- HEADER -->
 <header class="hd">
   <div class="hd-top">
     <div class="hd-in">
@@ -219,12 +223,11 @@ input[type="file"]{display:none}
     <div class="hd-tags">
       <span class="tag" style="background:#3B82F6;color:#fff">spare</span>
       <span class="tag tag-free">무료</span>
-      <span class="tag tag-v" id="verTag" onclick="A.devTap()">v18.3S</span>
+      <span class="tag tag-v" id="verTag" onclick="A.devTap()">v18.4S</span>
     </div>
   </div>
 </header>
 
-<!-- MODE BAR (below header) -->
 <div class="mode-bar-out">
   <label class="mode-ck active" id="mcFree">
     <input type="checkbox" id="ckFree" checked onchange="A.setMode('free')">
@@ -238,7 +241,6 @@ input[type="file"]{display:none}
   </label>
 </div>
 
-<!-- PASSWORD MODAL -->
 <div class="mo" id="moPwd">
 <div class="mo-b" style="max-width:320px;text-align:center">
   <div style="font-size:2.5rem;margin-bottom:10px">🔒</div>
@@ -251,16 +253,13 @@ input[type="file"]{display:none}
 </div>
 </div>
 
-<!-- STATUS -->
 <div class="st">
   <div class="st-chip"><div class="st-dot" id="sDot"></div><span id="sMsg">AI 대기 중</span></div>
   <button class="st-help" onclick="A.modal('help',1)"><i class="fa-solid fa-circle-question"></i> 도움말</button>
 </div>
 
-<!-- STORAGE -->
 <div class="sg"><i class="fa-solid fa-database"></i> <span id="sgTx">저장된 항목: 0건</span></div>
 
-<!-- STEPS -->
 <div class="steps">
   <div class="sn on" id="s1">1</div><div class="sl" id="l1"></div>
   <div class="sn" id="s2">2</div><div class="sl" id="l2"></div>
@@ -268,7 +267,7 @@ input[type="file"]{display:none}
   <div class="sn" id="s4">4</div>
 </div>
 
-<!-- SEC1: 현장 정보 -->
+<!-- SEC1 -->
 <div class="sec">
   <div class="sec-t"><span class="n">1</span> 현장 정보</div>
   <div class="ig">
@@ -282,15 +281,38 @@ input[type="file"]{display:none}
   </div>
   <div class="ig" style="margin-top:8px">
     <div class="il"><i class="fa-solid fa-location-dot"></i> 점검 위치</div>
-    <select class="if" id="fRoom">
+    <select class="if" id="fRoom" style="display:none">
       <option value="">위치 선택</option>
       <option>거실</option><option>주방</option><option>침실1</option><option>침실2</option><option>침실3</option>
       <option>안방</option><option>욕실1</option><option>욕실2</option><option>현관</option><option>발코니1</option><option>발코니2</option><option>대피공간</option><option>팬트리</option><option>다용도실</option><option>기타</option>
     </select>
+    <div class="cd-wrap" id="cdRoom">
+      <button type="button" class="cd-btn" id="cdBtn" onclick="A.toggleRoom()">
+        <span class="cd-placeholder" id="cdLabel">위치 선택</span>
+        <i class="fa-solid fa-chevron-down cd-arrow"></i>
+      </button>
+      <div class="cd-grid" id="cdGrid">
+        <div class="cd-item" data-val="거실" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">거실</span></div>
+        <div class="cd-item" data-val="주방" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">주방</span></div>
+        <div class="cd-item" data-val="침실1" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">침실1</span></div>
+        <div class="cd-item" data-val="침실2" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">침실2</span></div>
+        <div class="cd-item" data-val="침실3" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">침실3</span></div>
+        <div class="cd-item" data-val="안방" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">안방</span></div>
+        <div class="cd-item" data-val="욕실1" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">욕실1</span></div>
+        <div class="cd-item" data-val="욕실2" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">욕실2</span></div>
+        <div class="cd-item" data-val="현관" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">현관</span></div>
+        <div class="cd-item" data-val="발코니1" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">발코니1</span></div>
+        <div class="cd-item" data-val="발코니2" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">발코니2</span></div>
+        <div class="cd-item" data-val="대피공간" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">대피공간</span></div>
+        <div class="cd-item" data-val="팬트리" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">팬트리</span></div>
+        <div class="cd-item" data-val="다용도실" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">다용도실</span></div>
+        <div class="cd-item" data-val="기타" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">기타</span></div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- SEC2: 사진 -->
+<!-- SEC2 -->
 <div class="sec">
   <div class="sec-t"><span class="n">2</span> 사진 촬영</div>
   <div class="pg">
@@ -309,7 +331,7 @@ input[type="file"]{display:none}
   </div>
 </div>
 
-<!-- SEC3: 하자 -->
+<!-- SEC3 -->
 <div class="sec">
   <div class="sec-t"><span class="n">3</span> 하자 정보</div>
   <div class="ig">
@@ -349,7 +371,7 @@ input[type="file"]{display:none}
   <button class="btn-sv off" id="btnSv" onclick="A.save()" disabled><i class="fa-solid fa-check-circle"></i> 리스트에 저장</button>
 </div>
 
-<!-- SEC4: 리스트 -->
+<!-- SEC4 -->
 <div class="ls">
   <div class="lh">
     <div class="lh-l">
@@ -364,7 +386,6 @@ input[type="file"]{display:none}
   <div id="lBox"></div>
 </div>
 
-<!-- BOTTOM -->
 <div class="ba">
   <button class="ab pdf" onclick="A.pdf()"><div class="ab-ic"><i class="fa-solid fa-file-pdf"></i></div><span class="ab-tx">전체 저장</span></button>
   <button class="ab rv" onclick="A.modal('paid',1)"><div class="ab-ic"><i class="fa-solid fa-calendar-check"></i></div><span class="ab-tx">유료 예약</span></button>
@@ -439,13 +460,12 @@ import{GoogleGenerativeAI}from"@google/generative-ai";
 const K=["AIzaSyDNo_QhI","qoOyuyXywUYye","tipbf4RstINn8"].join('');
 const LIMIT=100;
 let list=[], wF=null, cF=null, devN=0, devT, mode='free';
+window.A={};
 
 const $=id=>document.getElementById(id);
 
-// Init
 window.addEventListener('DOMContentLoaded',()=>{
   if(ls('is_dev')==='true')$('verTag').classList.add('dev');
-  // Restore agreement checkbox if previously agreed
   if(ls('frog_agreed')==='true'){
     $('fAgree').checked=true;
     $('agreeNote').style.display='block';
@@ -457,7 +477,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 function ls(k,v){if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}
 
-// Steps
 function step(c){
   for(let i=1;i<=4;i++){
     const n=$(`s${i}`),l=$(`l${i}`);
@@ -471,8 +490,35 @@ function step(c){
 
 function stat(m,e){$('sMsg').textContent=m;$('sDot').classList.toggle('err',!!e)}
 
+// ===== Custom Room Selector =====
+A.toggleRoom=()=>{
+  const grid=$('cdGrid'), btn=$('cdBtn');
+  const isOpen=grid.classList.contains('show');
+  if(isOpen){
+    grid.classList.remove('show');
+    btn.classList.remove('open');
+  }else{
+    grid.classList.add('show');
+    btn.classList.add('open');
+  }
+};
+A.pickRoom=(el)=>{
+  const val=el.dataset.val;
+  $('fRoom').value=val;
+  const label=$('cdLabel');
+  label.textContent='✔ '+val;
+  label.classList.remove('cd-placeholder');
+  label.style.color='var(--p)';
+  label.style.fontWeight='800';
+  document.querySelectorAll('.cd-item').forEach(i=>i.classList.remove('selected'));
+  el.classList.add('selected');
+  setTimeout(()=>{
+    $('cdGrid').classList.remove('show');
+    $('cdBtn').classList.remove('open');
+  },150);
+};
+
 // Mode
-window.A={};
 A.setMode=m=>{
   if(m==='pro'){
     $('ckPro').checked=false;
@@ -482,7 +528,6 @@ A.setMode=m=>{
     setTimeout(()=>$('pwdInput').focus(),200);
     return;
   }
-  // Free mode
   mode='free';
   $('ckFree').checked=true;
   $('ckPro').checked=false;
@@ -510,7 +555,6 @@ A.cancelPwd=()=>{
   $('moPwd').classList.remove('show');
 };
 
-// Dev
 A.devTap=()=>{
   clearTimeout(devT);devN++;
   if(devN===5){
@@ -523,7 +567,6 @@ A.devTap=()=>{
   devT=setTimeout(()=>devN=0,1000);
 };
 
-// Limit check
 function chkLim(){
   if(ls('is_dev')==='true')return true;
   const today=new Date().toDateString();
@@ -533,7 +576,6 @@ function chkLim(){
   d.count++;ls('frog_use',JSON.stringify(d));return true;
 }
 
-// Photo
 $('inW').addEventListener('change',e=>photo(e,'w'));
 $('inC').addEventListener('change',e=>photo(e,'c'));
 
@@ -549,7 +591,6 @@ function show(id,src){const p=$(id);p.src=src;p.style.display='block'}
 
 async function toPart(f){return new Promise(r=>{const x=new FileReader();x.onloadend=()=>r({inlineData:{data:x.result.split(',')[1],mimeType:f.type}});x.readAsDataURL(f)})}
 
-// AI
 async function runAI(){
   const det=$('fDetail'), ui=$('fUser').value;
   det.value='🔍 AI 정밀 분석 중...';
@@ -594,14 +635,12 @@ async function runAI(){
   }
 }
 
-// Save toggle
 A.togSave=()=>{
   const ok=$('fAgree').checked;
   if(ok){ls('frog_agreed','true');$('agreeNote').style.display='block'}
   $('btnSv').disabled=!ok;$('btnSv').className=ok?'btn-sv ok':'btn-sv off';
 };
 
-// Save
 A.save=()=>{
   if(!$('fAgree').checked)return;
   const cs=$('pvC').src;
@@ -656,14 +695,20 @@ function reset(){
   ['pvW','pvC'].forEach(i=>{$(i).style.display='none'});
   ['rtW','rtC'].forEach(i=>{$(i).style.display='none'});
   $('fUser').value='';$('fDetail').value='';
-  // Keep agreement checked if previously agreed
+  // Reset custom dropdown
+  $('fRoom').value='';
+  const label=$('cdLabel');
+  label.textContent='위치 선택';
+  label.classList.add('cd-placeholder');
+  label.style.color='';
+  label.style.fontWeight='';
+  document.querySelectorAll('.cd-item').forEach(i=>i.classList.remove('selected'));
   if(ls('frog_agreed')!=='true'){
     $('fAgree').checked=false;A.togSave();
   }
   step(4);
 }
 
-// Storage
 function saveList(){
   try{
     const data=list.map(it=>({...it,wImg:null,cImg:null}));
@@ -681,12 +726,21 @@ function loadList(){
   }catch(e){list=[]}
 }
 
-// Edit/Delete
 A.edit=id=>{
   const idx=list.findIndex(i=>i.id===id);if(idx===-1)return;
   if(!confirm('수정 모드로 불러오시겠습니까?'))return;
   const it=list[idx];
-  $('fRoom').value=it.room;$('fWork').value=it.work;$('fDetail').value=it.detail;
+  // Set custom dropdown
+  $('fRoom').value=it.room;
+  const label=$('cdLabel');
+  label.textContent='✔ '+it.room;
+  label.classList.remove('cd-placeholder');
+  label.style.color='var(--p)';
+  label.style.fontWeight='800';
+  document.querySelectorAll('.cd-item').forEach(i=>{
+    i.classList.toggle('selected',i.dataset.val===it.room);
+  });
+  $('fWork').value=it.work;$('fDetail').value=it.detail;
   if(it.wImg)show('pvW',it.wImg);
   if(it.cImg)show('pvC',it.cImg);
   $(`i-${id}`).remove();list.splice(idx,1);$('lCnt').textContent=list.length;saveList();
@@ -701,17 +755,14 @@ A.clearAll=()=>{
   list=[];$('lBox').innerHTML='';$('lCnt').textContent=0;updateModeLabel();saveList();
 };
 
-// PDF
 A.pdf=()=>{if(!list.length){alert('저장할 내용이 없습니다.');return}window.print()};
 
-// Modal
 A.modal=(n,s)=>{
   const el=$(n==='paid'?'moPaid':'moHelp');
   el.classList.toggle('show',!!s);
   if(n==='help'&&s)$('hpCk').checked=false;
 };
 
-// Chat
 A.chat=()=>{$('chatW').classList.toggle('show')};
 const ans={
   cost:{q:'점검 비용이 궁금해요.',a:'💰 <b>점검 비용 안내</b><br>29평 이하: 13만원<br>30평 이상: 15만원<br>50평 이상: 20만원<br><br>※ 수도권 외 추가 출장비 발생 가능'},
