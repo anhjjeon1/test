@@ -21,8 +21,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 .app{width:100%;max-width:480px;min-height:100vh;background:#FAFBFC;position:relative;padding-bottom:90px}
 
 /* Header */
-.hd{background:linear-gradient(135deg,#0A2E23 0%,#0A6B5C 35%,#12B89A 70%,#0A6B5C 100%)
-.hd::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(18,184,154,.25) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(255,107,53,.1) 0%,transparent 40%)
+.hd{background:linear-gradient(135deg,#0A2E23 0%,#0A6B5C 35%,#12B89A 70%,#0A6B5C 100%);padding:0;position:relative;overflow:hidden}
+.hd::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(18,184,154,.25) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(255,107,53,.1) 0%,transparent 40%);animation:hdBg 8s ease-in-out infinite alternate}
 @keyframes hdBg{0%{transform:translate(0,0)}100%{transform:translate(-3%,3%)}}
 .hd::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:14px;background:#FAFBFC;border-radius:14px 14px 0 0}
 .hd-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 18px;position:relative;z-index:2}
@@ -409,7 +409,7 @@ input[type="file"]{display:none}
   <div class="pr"><span class="pr-l">29평 이하</span><span class="pr-v">130,000원</span></div>
   <div class="pr"><span class="pr-l">30평 이상</span><span class="pr-v">150,000원</span></div>
   <div class="pr" style="margin-bottom:14px"><span class="pr-l">50평 이상</span><span class="pr-v">200,000원</span></div>
- <div class="nt"><b>📋 예약 및 환불 규정</b><br>1. <b>직통(010-2322-0949)</b>로 주소, 방문일, 방문시간(필수) 문자전송 또는 유료예약 신청서 작성 → 방문확정 통화 후 입금<br>2. 방문 <b>7일 전 취소 시 100% 환불</b><br>3. 그 외 기간 환불 불가<br>4. 예약서 작성 시 위 내용 동의 간주<br>5. <b>입금계좌 ( 국민은행 090537-04-003309 청개구리샤시 )</b></div>
+  <div class="nt"><b>📋 예약 및 환불 규정</b><br>1. 선입금 후 <b>직통(010-2322-0949)</b>으로 입금자·주소·방문일/시간 문자 → 확정 통보<br>2. 방문 <b>7일 전 취소 시 100% 환불</b><br>3. 그 외 기간 환불 불가<br>4. 예약서 작성 시 위 내용 동의 간주</div>
   <button class="btn-f" onclick="window.open('https://forms.gle/iF9t9gXCHkuMQj8W6','_blank')"><i class="fa-solid fa-pen-to-square"></i> 예약 신청서 작성</button>
   <button class="mo-cls" onclick="A.modal('paid',0)">닫기</button>
 </div>
@@ -817,6 +817,3 @@ A.ask=t=>{
 </script>
 </body>
 </html>
-
-
-
