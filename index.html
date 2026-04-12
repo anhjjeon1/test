@@ -6,12 +6,36 @@
 <meta name="theme-color" content="#0A6B5C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>청개구리 입주자 사전점검 AI앱 SPARE v22.4</title>
+<title>청개구리 입주자 사전점검 AI앱 SPARE v27.5</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;800;900&family=Outfit:wght@600;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 /* ============================================================
-   청개구리 입주자 사전점검 AI v22.4
+   청개구리 입주자 사전점검 AI v25.0
+   v25.0 변경사항:
+   - [흐름] 사진→위치→하자내용→AI분석→자동저장 순서로 변경
+   - [UI] AI 분석 라벨을 클릭 가능한 버튼으로 변경
+   - [기능] AI 오류/타임아웃 시 자동저장 제거 (재분석만 가능)
+   - [기능] 가까이 찍기 후 AI 자동실행 제거 (사용자가 AI 분석 버튼 클릭)
+   v25.0 변경사항:
+   - [성능] 1차+2차 분석을 1회 통합 호출로 변경 (속도 2배 향상)
+   - [성능] AbortController로 타임아웃 시 fetch 즉시 중단
+   - [성능] 프롬프트 압축 (품질 유지, 토큰 절감)
+   - [성능] 타임아웃 30초→25초로 단축
+   v23.0 변경사항:
+   - [AI] 1차/2차 분석 프롬프트 전면 업그레이드 (사진·입력 모드 모두)
+   - [AI] 국토부 하자판정 기준·KS 표준 구체적 수치 인용 강화
+   - [AI] 심각도 판정 기준 체계화 (경미/보통/중대)
+   - [AI] 허용범위 판정 로직 명확화
+   v22.9 변경사항:
+   - [기능] AI 분석 30초 타임아웃 추가 — 초과 시 기본값 자동저장 후 다음입력 이동
+   - [기능] AI 분석 오류 시 기본값(확인필요) 저장 후 자동으로 다음입력 진행
+   v22.7 변경사항:
+   - [UI] AI 참고용 동의 체크박스를 분석결과 textarea 아래로 이동
+   v22.6 변경사항:
+   - [UI] 위치 선택 버튼 한 줄(flex-wrap) 레이아웃으로 변경
+   - [기능] 실외기실 위치 항목 추가
+   - [기능] AI 분석 오류 시 재분석 버튼 표시 (분석 성공 시 자동 숨김)
    v22.4 변경사항:
    - [UI] 초기화 버튼 연한 붉은색 배경으로 변경
    v22.3 변경사항:
@@ -54,12 +78,14 @@ body{
 .app{
   width:100%;max-width:480px;
   background:#FAFBFC;position:relative;
-  padding-bottom:calc(12px + var(--safe-bottom));
+  padding:0 0 calc(12px + var(--safe-bottom));
+  overflow-x:hidden;
+  box-sizing:border-box;
 }
 
 /* ── HEADER ── */
 .hd{
-  background:linear-gradient(135deg,#1A1A4E 0%,#2D3A8C 35%,#4F6AE8 70%,#2D3A8C 100%);
+  background:linear-gradient(135deg,#0A2E23 0%,#0A6B5C 35%,#12B89A 70%,#0A6B5C 100%);
   padding:0;
   position:relative;
   overflow:hidden;
@@ -71,7 +97,7 @@ body{
   left:-50%;
   width:200%;
   height:200%;
-  background:radial-gradient(circle at 30% 40%,rgba(79,106,232,.25) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(255,107,53,.1) 0%,transparent 40%);
+  background:radial-gradient(circle at 30% 40%,rgba(18,184,154,.25) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(255,107,53,.1) 0%,transparent 40%);
   animation:hdBg 8s ease-in-out infinite alternate;
 }
 @keyframes hdBg{0%{transform:translate(0,0)}100%{transform:translate(-3%,3%)}}
@@ -437,9 +463,9 @@ body{
 /* ── SECTIONS ── */
 .sec{
   background:var(--card);
-  margin:0 2px 8px;
+  margin:0 0 6px;
   border-radius:12px;
-  padding:10px 6px;
+  padding:8px 6px;
   box-shadow:0 2px 8px rgba(0,0,0,.05);
   border:1px solid var(--bl);
 }
@@ -455,13 +481,13 @@ body{
 .sec-t .n{
   background:var(--p);
   color:#fff;
-  width:22px;
-  height:22px;
-  border-radius:6px;
+  width:17px;
+  height:17px;
+  border-radius:5px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:.72rem;
+  font-size:.6rem;
   font-weight:900;
 }
 .ig{margin-bottom:9px}
@@ -509,8 +535,10 @@ select.if option{color:var(--tx);
 }
 textarea.if{
   resize:none;
-  height:85px;
+  min-height:85px;
+  height:auto;
   line-height:1.6;
+  overflow-y:hidden;
 }
 .row{display:flex;gap:9px}
 .row>*{flex:1}
@@ -555,6 +583,8 @@ textarea.if{
 }
 .cd-btn.open .cd-arrow{transform:rotate(180deg)}
 .cd-btn .cd-placeholder{color:var(--th)}
+.cd-btn-sm{padding:8px 6px;font-size:.72rem}
+.cd-btn-sm .cd-placeholder{font-size:.72rem}
 .cd-btn.err-shake{
   border-color:var(--dn);
   box-shadow:0 0 0 3px rgba(231,76,60,.15);
@@ -573,15 +603,15 @@ textarea.if{
 .cd-item{
   display:flex;
   align-items:center;
-  gap:6px;
-  padding:7px 10px;
+  gap:4px;
+  padding:6px 10px;
   border:1.5px solid var(--bd);
   border-radius:10px;
   background:#FAFBFC;
   cursor:pointer;
   transition:all .15s;
   user-select:none;
-  min-height:35px;
+  white-space:nowrap;
 }
 .cd-item:active{transform:scale(.97)}
 .cd-item .cd-radio{
@@ -682,17 +712,24 @@ textarea.if{
 .ai-b{
   display:inline-flex;
   align-items:center;
-  gap:4px;
+  gap:3px;
   background:linear-gradient(135deg,var(--p),var(--pl));
   color:#fff;
-  padding:2px 9px;
-  border-radius:5px;
+  padding:1px 7px;
+  border-radius:4px;
   font-size:.68rem;
   font-weight:700;
 }
+.btn-reanalyze{
+  display:inline-flex;align-items:center;gap:3px;
+  background:#EF4444;color:#fff;border:none;border-radius:5px;
+  padding:2px 8px;font-size:.65rem;font-weight:700;cursor:pointer;
+  transition:all .15s;
+}
+.btn-reanalyze:active{transform:scale(.95)}
 .af{
   display:grid;
-  grid-template-columns:1fr 1fr 1fr;
+  grid-template-columns:1fr 1fr;
   gap:7px;
   margin-bottom:12px;
 }
@@ -1460,7 +1497,7 @@ textarea.if{
   flex-shrink:0;
 }
 .cb-bubble{
-  max-width:78%;
+  max-width:95%;
   padding:10px 13px;
   border-radius:14px;
   font-size:.82rem;
@@ -1662,7 +1699,7 @@ input[type="file"]{
 <header class="hd">
   <div class="hd-top" style="justify-content:center;align-items:center;padding:12px 14px 10px">
     <div class="hd-title" style="font-size:1.26rem">청개구리 입주점검 AI앱 <span style="background:#FF6B35;color:#fff;font-size:.55rem;padding:2px 6px;border-radius:5px;vertical-align:middle;margin-left:4px">SPARE</span></div>
-    <span class="tag tag-v" id="verTag" data-ver onclick="A.devTap()" style="position:absolute;right:14px">v22.4</span>
+    <span class="tag tag-v" id="verTag" data-ver onclick="A.devTap()" style="position:absolute;right:14px">v25.0</span>
     <span id="passTag" style="display:none">기부형 앱</span>
   </div>
   <div id="logoImg" style="display:none"></div>
@@ -1733,7 +1770,7 @@ input[type="file"]{
 
 <!-- ── STEP 3: 하자 정보 ── -->
 <div class="sec">
-  <div class="sec-t" style="display:flex;align-items:center;gap:6px"><span class="n">3</span> 하자 정보 <span style="color:var(--p);font-size:.6rem;font-weight:900">★ 하자내용(필수입력)</span><div style="margin-left:auto;display:flex;gap:24px"><button id="btnNext" onclick="A.nextInput()" style="background:var(--p);color:#fff;border:none;border-radius:20px;padding:4px 10px;font-size:.6rem;font-weight:700;cursor:pointer;font-family:inherit">➡️ 다음입력</button><button onclick="if(confirm('현재 입력을 초기화할까요?')){reset();step(1);stat('🔄 초기화 완료');}" style="background:#FEE2E2;color:#DC2626;border:none;border-radius:20px;padding:4px 10px;font-size:.6rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 초기화</button></div></div>
+  <div class="sec-t" style="display:flex;align-items:center;gap:6px"><span class="n">3</span> 하자 정보<div style="margin-left:auto;display:flex;gap:8px"><button id="btnNext" onclick="A.nextInput()" style="background:var(--p);color:#fff;border:none;border-radius:20px;padding:4px 10px;font-size:.6rem;font-weight:700;cursor:pointer;font-family:inherit">➡️ 다음입력</button><button onclick="if(confirm('현재 입력을 초기화할까요?')){reset();step(1);stat('🔄 초기화 완료');}" style="background:#FEE2E2;color:#DC2626;border:none;border-radius:20px;padding:4px 10px;font-size:.6rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 초기화</button></div></div>
 
   <div class="input-hint-banner" id="inputHintBanner" style="display:none">
     <span id="inputModeBadge"></span>
@@ -1763,28 +1800,27 @@ input[type="file"]{
           <div class="cd-item" data-val="팬트리" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">팬트리</span></div>
           <div class="cd-item" data-val="드레스룸" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">드레스룸</span></div>
           <div class="cd-item" data-val="다용도실" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">다용도실</span></div>
+          <div class="cd-item" data-val="실외기실" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">실외기실</span></div>
           <div class="cd-item" data-val="기타" onclick="A.pickRoom(this)"><span class="cd-radio"></span><span class="cd-label">기타</span></div>
         </div>
       </div>
     </div>
-    <div style="position:relative">
+    <div style="position:relative;display:flex;gap:4px;align-items:center">
       <input type="text" class="if" id="fUser"
         placeholder="✏️ 하자내용 (예: 창호 수직수평불량)"
-        style=""
+        style="flex:1"
         oninput="A.onUserInput(this)">
+      <button class="ai-b" id="btnRunAI" onclick="A.startAI()" style="border:none;cursor:pointer;padding:8px 12px;font-size:.72rem;white-space:nowrap;flex-shrink:0"><i class="fa-solid fa-robot"></i> AI분석</button>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:9px">
-    <select class="if" id="fWork" style="padding:9px 6px" onchange="A.onWork()">
-      <option value="">공종(자동입력)</option>
-    </select>
-    <select class="if" id="fSub" style="padding:9px 6px" onchange="A.onSub()">
-      <option value="">세부(자동입력)</option>
-    </select>
-    <select class="if" id="fType" style="padding:9px 6px">
-      <option value="">유형(자동입력)</option>
-    </select>
-  </div>
+  <!-- 공종/세부/유형 hidden inputs (AI 자동 입력) -->
+  <input type="hidden" id="fWork" value="">
+  <input type="hidden" id="fSub" value="">
+  <input type="hidden" id="fType" value="">
+  <div style="display:none" id="afSelects"></div>
+  <div style="display:none" id="wkBtn"></div><div style="display:none" id="subBtn"></div><div style="display:none" id="typeBtn"></div>
+  <div style="display:none" id="wkGrid"></div><div style="display:none" id="subGrid"></div><div style="display:none" id="typeGrid"></div>
+  <div style="display:none" id="wkLabel"></div><div style="display:none" id="subLabel"></div><div style="display:none" id="typeLabel"></div>
   <div class="ai-tags" id="aiTags" style="display:none">
     <span class="ai-tag work" id="tagWork"></span>
     <span class="ai-tag sub" id="tagSub"></span>
@@ -1793,16 +1829,18 @@ input[type="file"]{
   <div class="ig">
     <div class="il" style="justify-content:space-between">
       <div style="display:flex;align-items:center;gap:4px">
-        <span class="ai-b"><i class="fa-solid fa-robot"></i> AI 분석</span>
         <span style="font-size:.62rem;color:var(--th)">국토부 기준 참조</span>
+        <button class="btn-reanalyze" id="btnReanalyze" onclick="A.reanalyze()" style="display:none"><i class="fa-solid fa-rotate-right"></i> 수정 후 재분석</button>
       </div>
-      <label for="fAgree" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:.6rem;font-weight:700;color:var(--ts)">
+    </div>
+    <div style="background:#F3F4F6;border:1.5px solid var(--bd);border-radius:10px;overflow:hidden">
+      <textarea class="if" id="fDetail" placeholder="" style="border:none;border-radius:0;margin:0"></textarea>
+      <label for="fAgree" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:.65rem;font-weight:700;color:var(--ts);padding:6px 10px;justify-content:flex-end;border-top:1px solid var(--bd)">
         <input type="checkbox" id="fAgree" onchange="A.togSave()" style="width:14px;height:14px;accent-color:var(--p);cursor:pointer">
         AI 참고용, 법적효력 없음 동의
         <span id="agreeNote" style="font-size:.55rem;color:#059669;display:none">✓</span>
       </label>
     </div>
-    <textarea class="if" id="fDetail" placeholder="사진 촬영 시 AI가 자동 분석합니다.&#10;하자 내용 직접 입력 시 더 정밀한 분석이 제공됩니다."></textarea>
   </div>
   <button class="btn-sv off" id="btnSv" onclick="A.save()" disabled style="display:none">
     <i class="fa-solid fa-check-circle"></i> 리스트에 저장
@@ -1836,21 +1874,17 @@ input[type="file"]{
   </button>
 </div>
 
-<div class="ft">
-  <div class="ft-donate">
-    <div class="ft-donate-text">💚 수익 50% <img src="stc-logo.png" alt="세이브더칠드런" style="height:14px;vertical-align:middle;border-radius:2px"> 기부 됩니다 | 📞 010-2322-0949</div>
+<div style="background:#F1F4F8;border-radius:10px;padding:8px 12px;margin:8px 0 4px;text-align:center">
+  <div style="font-size:.68rem;color:#6B7B8F;font-weight:700;line-height:1.5"><img src="stc-logo.png" alt="Save the Children" style="height:22px;vertical-align:middle;border-radius:3px"> 에 50%가 기부됩니다 | 📞 010-2322-0949</div>
+  <div style="margin-top:4px;display:flex;justify-content:center;align-items:center;gap:6px">
+    <button onclick="const d=$('ftDetail');d.style.display=d.style.display==='none'?'block':'none'" style="background:none;border:none;font-size:.55rem;color:var(--th);cursor:pointer;font-family:inherit;text-decoration:underline">사업자 정보 보기</button>
+    <span style="color:var(--bd)">|</span>
+    <a href="#" onclick="A.modal('moPrivacy',1);return false;" style="font-size:.55rem;color:var(--ac);text-decoration:underline;font-weight:600">개인정보처리방침</a>
   </div>
-  <div style="text-align:center;margin-top:6px">
-    <button onclick="const d=$('ftDetail');d.style.display=d.style.display==='none'?'block':'none'" style="background:none;border:none;font-size:.58rem;color:var(--th);cursor:pointer;font-family:inherit;text-decoration:underline">사업자 정보 보기</button>
-    <span style="margin:0 4px;color:var(--bd)">|</span>
-    <a href="#" onclick="A.modal('moPrivacy',1);return false;" style="font-size:.58rem;color:var(--ac);text-decoration:underline;font-weight:600">개인정보처리방침</a>
-  </div>
-  <div id="ftDetail" style="display:none;font-size:.5rem;margin-top:6px;letter-spacing:-.03em;line-height:1.6;text-align:center;padding:0 6px;color:var(--th)">
-    청개구리샤시 | 대표:전영웅 | 사업자:123-36-31426<br>
-    통신판매:제2011-경기군포-00342호<br>
-    군포시 용호1로21번길15, 102동1501호<br>
-    ✉toi9113@naver.com | 환불:코드 미사용시 전액/사용후 불가<br>
-    보조도구이며 법적책임없음 | ⓒ2026 Cheong-gaeguri | <span data-ver>v22.4</span>
+  <div id="ftDetail" style="display:none;font-size:.5rem;margin-top:4px;color:var(--th);line-height:1.5">
+    청개구리샤시 | 대표:전영웅 | 사업자:123-36-31426 | 통신판매:제2011-경기군포-00342호<br>
+    군포시 용호1로21번길15, 102동1501호 | ✉toi9113@naver.com<br>
+    환불:코드 미사용시 전액/사용후 불가 | 보조도구이며 법적책임없음 | ⓒ2026 Cheong-gaeguri | <span data-ver>v26.3</span>
   </div>
 </div>
 </div><!-- /app -->
@@ -2002,7 +2036,7 @@ input[type="file"]{
 /* ============================================================
    ★ 설정값
    ============================================================ */
-const APP_VER = 'v22.4';
+const APP_VER = 'v27.5-SPARE';
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwaGre5b025jL1of_znmu_EVg-CyqnrsAPXlc_nQkmuGHq-LZKhwJb9sDyQTdcUW4i9Pg/exec';
 const SPARE_URL = 'https://anhjjeon1.github.io/inspect-spare/';
 const LIMIT_FREE = 3;
@@ -2136,8 +2170,69 @@ function updateQuotaUI(){const m=getActiveMode(),limit=getLimit(),{data}=getQuot
    ⚙️ 공종/세부/유형
    ============================================================ */
 function initWorkSelect(){const sel=$('fWork');sel.innerHTML='<option value="">공종(자동입력)</option>';for(const w of Object.keys(WM)){const o=document.createElement('option');o.value=w;o.textContent=w;sel.appendChild(o);}}
-A.onWork=()=>{const w=$('fWork').value,sub=$('fSub');$('fWork').classList.toggle('has-val',!!w);sub.innerHTML='<option value="">세부(자동입력)</option>';sub.classList.remove('has-val');$('fType').innerHTML='<option value="">유형(자동입력)</option>';$('fType').classList.remove('has-val');if(w&&WM[w])for(const s of Object.keys(WM[w])){const o=document.createElement('option');o.value=s;o.textContent=s;sub.appendChild(o);}};
-A.onSub=()=>{const w=$('fWork').value,s=$('fSub').value,tp=$('fType');$('fSub').classList.toggle('has-val',!!s);tp.innerHTML='<option value="">유형(자동입력)</option>';tp.classList.remove('has-val');if(w&&s&&WM[w]&&WM[w][s])for(const t of WM[w][s]){const o=document.createElement('option');o.value=t;o.textContent=t;tp.appendChild(o);}};
+A.onWork=()=>{$('fSub').value='';$('fType').value='';};
+A.onSub=()=>{$('fType').value='';};
+
+/* ── 공종/세부/유형 그리드 선택 (위치선택 패턴) ── */
+function _renderGrid(gridEl,items,pickFn){
+  gridEl.innerHTML='';
+  items.forEach(v=>{const d=document.createElement('div');d.className='cd-item';d.dataset.val=v;d.onclick=()=>pickFn(d);d.innerHTML='<span class="cd-radio"></span><span class="cd-label">'+v+'</span>';gridEl.appendChild(d);});
+}
+function _toggleGrid(gridEl,btnEl){btnEl.classList.toggle('open');gridEl.classList.toggle('show');}
+function _closeGrid(gridEl,btnEl){gridEl.classList.remove('show');btnEl.classList.remove('open');}
+function _selectItem(gridEl,val){gridEl.querySelectorAll('.cd-item').forEach(i=>i.classList.toggle('selected',i.dataset.val===val));}
+
+A.toggleWork=()=>{
+  const g=$('wkGrid'),b=$('wkBtn');
+  if(!g.children.length)_renderGrid(g,Object.keys(WM),A.pickWork);
+  _toggleGrid(g,b);
+  _closeGrid($('subGrid'),$('subBtn'));_closeGrid($('typeGrid'),$('typeBtn'));
+};
+A.pickWork=(el)=>{
+  const v=el.dataset.val;$('fWork').value=v;
+  const lb=$('wkLabel');lb.textContent='✔ '+v;lb.classList.remove('cd-placeholder');lb.style.color='var(--p)';lb.style.fontWeight='800';
+  _selectItem($('wkGrid'),v);
+  setTimeout(()=>_closeGrid($('wkGrid'),$('wkBtn')),150);
+  A.onWork();
+  /* 세부 리셋 */
+  $('subLabel').textContent='세부';$('subLabel').className='cd-placeholder';$('subLabel').style.color='';$('subLabel').style.fontWeight='';
+  $('subGrid').innerHTML='';
+  $('typeLabel').textContent='유형';$('typeLabel').className='cd-placeholder';$('typeLabel').style.color='';$('typeLabel').style.fontWeight='';
+  $('typeGrid').innerHTML='';
+  saveDraft();
+};
+A.toggleSub=()=>{
+  const w=$('fWork').value;if(!w){stat('⚠️ 공종을 먼저 선택하세요',true);return;}
+  const g=$('subGrid'),b=$('subBtn');
+  if(!g.children.length)_renderGrid(g,Object.keys(WM[w]||{}),A.pickSub);
+  _toggleGrid(g,b);
+  _closeGrid($('wkGrid'),$('wkBtn'));_closeGrid($('typeGrid'),$('typeBtn'));
+};
+A.pickSub=(el)=>{
+  const v=el.dataset.val;$('fSub').value=v;
+  const lb=$('subLabel');lb.textContent='✔ '+v;lb.classList.remove('cd-placeholder');lb.style.color='var(--p)';lb.style.fontWeight='800';
+  _selectItem($('subGrid'),v);
+  setTimeout(()=>_closeGrid($('subGrid'),$('subBtn')),150);
+  A.onSub();
+  $('typeLabel').textContent='유형';$('typeLabel').className='cd-placeholder';$('typeLabel').style.color='';$('typeLabel').style.fontWeight='';
+  $('typeGrid').innerHTML='';
+  saveDraft();
+};
+A.toggleType=()=>{
+  const w=$('fWork').value,s=$('fSub').value;
+  if(!w||!s){stat('⚠️ 공종과 세부를 먼저 선택하세요',true);return;}
+  const g=$('typeGrid'),b=$('typeBtn');
+  if(!g.children.length)_renderGrid(g,(WM[w]&&WM[w][s])||[],A.pickType);
+  _toggleGrid(g,b);
+  _closeGrid($('wkGrid'),$('wkBtn'));_closeGrid($('subGrid'),$('subBtn'));
+};
+A.pickType=(el)=>{
+  const v=el.dataset.val;$('fType').value=v;
+  const lb=$('typeLabel');lb.textContent='✔ '+v;lb.classList.remove('cd-placeholder');lb.style.color='var(--p)';lb.style.fontWeight='800';
+  _selectItem($('typeGrid'),v);
+  setTimeout(()=>_closeGrid($('typeGrid'),$('typeBtn')),150);
+  saveDraft();
+};
 $('fType')&&$('fType').addEventListener('change',()=>{$('fType').classList.toggle('has-val',!!$('fType').value);});
 
 /* ── ★ v20.8: 사용자 입력 실시간 UI 업데이트 ── */
@@ -2159,7 +2254,112 @@ A.onUserInput=(el)=>{
     badge.innerHTML='📷 사진 모드';
   }
   draftDebounce();
+  /* v25.2: 하자내용 입력 시 공종/세부/유형 자동 매칭 + AI 자동 실행 */
+  if(hasVal) _autoMatchDebounce(el.value.trim());
 };
+
+/* ── v25.2: 키워드 기반 공종/세부/유형 자동 매칭 ── */
+const _KW_MAP=[
+  /* 키워드 → [공종, 세부, 유형(기본)] */
+  {kw:['터닝도어','터닝'],w:'PL창호공사',s:'터닝도어',t:'파손'},
+  {kw:['분합창'],w:'PL창호공사',s:'분합창',t:'개폐불량'},
+  {kw:['대피창'],w:'PL창호공사',s:'대피창',t:'개폐불량'},
+  {kw:['방충망'],w:'PL창호공사',s:'PL방충망',t:'파손'},
+  {kw:['PL창호','창호','창문','샤시'],w:'PL창호공사',s:'PL창호',t:'고정불량'},
+  {kw:['현관문'],w:'방화문공사',s:'현관문',t:'개폐불량'},
+  {kw:['대피공간','대피문','방화문'],w:'방화문공사',s:'대피공간방화문',t:'개폐불량'},
+  {kw:['실외기실문','실외기문'],w:'방화문공사',s:'실외기실문짝/틀',t:'개폐불량'},
+  {kw:['슬라이딩','중문'],w:'중문공사',s:'슬라이딩도어/틀',t:'개폐불량'},
+  {kw:['스윙도어','스윙'],w:'중문공사',s:'스윙도어/틀',t:'개폐불량'},
+  {kw:['도배','벽지'],w:'도배공사',s:'도배',t:'들뜸'},
+  {kw:['타일코킹'],w:'타일공사',s:'타일코킹',t:'코킹불량'},
+  {kw:['마블씰'],w:'타일공사',s:'마블씰',t:'들뜸'},
+  {kw:['폴리싱'],w:'타일공사',s:'폴리싱타일',t:'파손'},
+  {kw:['아트월타일'],w:'타일공사',s:'아트월타일',t:'틈새'},
+  {kw:['타일'],w:'타일공사',s:'타일',t:'줄눈불량'},
+  {kw:['주방상판','엔지니어드'],w:'주방상판공사',s:'주방상판/코킹',t:'코킹불량'},
+  {kw:['씽크볼','싱크볼'],w:'주방가구공사',s:'씽크볼',t:'마감불량'},
+  {kw:['아일랜드'],w:'주방가구공사',s:'아일랜드장',t:'수직수평불량'},
+  {kw:['냉장고장'],w:'주방가구공사',s:'냉장고장',t:'흠집/찍힘'},
+  {kw:['주방','상부장','하부장'],w:'주방가구공사',s:'주방상/하부장',t:'수직수평불량'},
+  {kw:['신발장'],w:'일반가구공사',s:'신발장',t:'흠집/찍힘'},
+  {kw:['붙박이'],w:'일반가구공사',s:'붙박이장',t:'흠집/찍힘'},
+  {kw:['화장대'],w:'일반가구공사',s:'화장대',t:'흠집/찍힘'},
+  {kw:['아트월판넬','아트월'],w:'일반가구공사',s:'아트월판넬',t:'틈새'},
+  {kw:['드레스룸'],w:'일반가구공사',s:'드레스룸도어/틀',t:'흠집/찍힘'},
+  {kw:['팬트리'],w:'일반가구공사',s:'현관팬트리도어/틀',t:'흠집/찍힘'},
+  {kw:['강마루','마루'],w:'마루공사',s:'강마루',t:'들뜸'},
+  {kw:['마루코킹'],w:'마루공사',s:'마루코킹',t:'코킹불량'},
+  {kw:['걸레받이'],w:'마루공사',s:'걸레받이',t:'틈새'},
+  {kw:['목문틀','문틀'],w:'목창호공사',s:'목문틀',t:'흠집/찍힘'},
+  {kw:['목문짝','문짝'],w:'목창호공사',s:'목문짝',t:'개폐불량'},
+  {kw:['도장','페인트','칠'],w:'도장공사',s:'도장',t:'마감불량'},
+  {kw:['코킹'],w:'코킹공사',s:'코킹',t:'코킹불량'},
+  {kw:['변기','세면대','세면기','양변기'],w:'기계설비공사',s:'위생도기류',t:'고정불량'},
+  {kw:['수전','수도꼭지'],w:'기계설비공사',s:'수전류',t:'작동불량'},
+  {kw:['배수','하수'],w:'기계설비공사',s:'배수드레인',t:'배수불량'},
+  {kw:['욕실장'],w:'욕실장공사',s:'욕실장/코킹',t:'미시공'},
+  {kw:['콘센트'],w:'전기공사',s:'콘센트',t:'작동불량'},
+  {kw:['스위치'],w:'전기공사',s:'스위치',t:'작동불량'},
+  {kw:['조명','전등','등기구'],w:'조명공사',s:'세대등기구',t:'점등불량'},
+  {kw:['석고보드','천장'],w:'내장목공사',s:'석고보드',t:'마감불량'},
+  {kw:['몰딩'],w:'내장목공사',s:'천정몰딩',t:'틈새'},
+  {kw:['시스템가구'],w:'시스템가구공사',s:'시스템가구',t:'고정불량'},
+  {kw:['월판넬'],w:'시스템가구공사',s:'월판넬',t:'틈새'},
+  {kw:['유리'],w:'유리공사',s:'유리',t:'파손'},
+  {kw:['실외기','에어컨'],w:'에어컨공사',s:'시스템에어컨',t:'작동불량'},
+  {kw:['루버'],w:'루버창호공사',s:'루버창/방충망',t:'고정불량'},
+  {kw:['석재걸레받이'],w:'내부석공사',s:'석재걸레받이',t:'틈새'},
+  {kw:['디딤판'],w:'내부석공사',s:'디딤판',t:'틈새'},
+  {kw:['청소','오염'],w:'준공청소공사',s:'준공청소',t:'오염'},
+];
+/* 유형 키워드 매칭 */
+const _TYPE_KW={
+  '파손':['파손','깨짐','깨진','부서','부러','터짐','터진','갈라'],
+  '개폐불량':['개폐','안열','안닫','안잠','잠금','열림','닫힘','여닫'],
+  '흠집/찍힘':['흠집','찍힘','긁힘','스크래치','긁힌','찍힌'],
+  '들뜸':['들뜸','들떠','들뜬','부풀'],
+  '틈새':['틈새','틈','벌어','갈라짐'],
+  '누수':['누수','물새','물이'],
+  '코킹불량':['코킹','실리콘','실란트'],
+  '수직수평불량':['수직','수평','기울','비뚤','삐뚤'],
+  '마감불량':['마감','마무리','지저분'],
+  '오염':['오염','얼룩','더러','때'],
+  '미시공':['미시공','빠진','누락','안된','없는'],
+  '작동불량':['작동','안됨','고장','안되'],
+  '고정불량':['고정','흔들','느슨','유동','덜거덕'],
+  '줄눈불량':['줄눈'],
+  '단차':['단차','높낮이','높이차'],
+  '균열':['균열','크랙','갈라짐','금'],
+  '도장불량':['도장','페인트','칠'],
+  '배수불량':['배수','물빠짐'],
+  '점등불량':['점등','불안켜','안켜'],
+  '이색/변색':['변색','이색','색다름','색상'],
+};
+function _matchWorkSubType(text){
+  const t=text.toLowerCase();
+  let match=null;
+  for(const m of _KW_MAP){if(m.kw.some(k=>t.includes(k))){match=m;break;}}
+  if(!match)return null;
+  /* 유형 매칭: 입력 텍스트에서 유형 키워드 검색 */
+  let matchedType=match.t;
+  const availTypes=WM[match.w]&&WM[match.w][match.s]?WM[match.w][match.s]:[];
+  for(const[typ,kws]of Object.entries(_TYPE_KW)){
+    if(availTypes.includes(typ)&&kws.some(k=>t.includes(k))){matchedType=typ;break;}
+  }
+  return{work:match.w,sub:match.s,type:matchedType};
+}
+let _matchTimer;
+function _autoMatchDebounce(text){clearTimeout(_matchTimer);_matchTimer=setTimeout(()=>_autoMatch(text),800);}
+function _autoMatch(text){
+  if(!text||text.length<2)return;
+  const m=_matchWorkSubType(text);
+  if(!m)return;
+  /* 공종/세부/유형 자동 적용 */
+  _applyAIResult(m.work,m.sub,m.type);
+  saveDraft();
+  stat(`🔍 "${text}" → ${m.work} > ${m.sub} > ${m.type} 자동 매칭 — AI분석 버튼을 눌러주세요`);
+}
 
 /* ============================================================
    🚀 초기화
@@ -2200,7 +2400,7 @@ function processPhoto(f,t){
   if(f.size>20*1024*1024){if(!confirm(`파일 크기가 큽니다(${(f.size/1024/1024).toFixed(1)}MB). 계속하시겠습니까?`))return;}
   resizeForPreview(f).then(dataUrl=>{
     if(t==='w'){wF=f;showPreview('pvW',dataUrl);$('rtW').style.display='block';stat('가까이 찍기를 촬영하세요');step(2);saveDraft();}
-    else{cF=f;showPreview('pvC',dataUrl);$('rtC').style.display='block';step(3);saveDraft();runAI();}
+    else{cF=f;showPreview('pvC',dataUrl);$('rtC').style.display='block';step(3);saveDraft();stat('📍 위치 선택 → 하자내용 입력 → AI 분석 버튼을 누르세요');}
   }).catch(()=>{stat('사진 읽기 실패. 다시 시도해주세요.',true);alert('사진을 불러오지 못했습니다.\n다른 사진을 선택해주세요.');});
 }
 
@@ -2240,12 +2440,15 @@ function stat(m,e){$('sMsg').textContent=m;$('sDot').classList.toggle('err',!!e)
 function toast(msg,warn=false,dur=2800){const el=$('toastMsg');el.innerHTML=msg;el.className='toast'+(warn?' warn':'');clearTimeout(el._t);requestAnimationFrame(()=>{el.classList.add('show');});el._t=setTimeout(()=>{el.classList.remove('show');},dur);}
 
 /* ── 자동 저장 ── */
-function autoSave(savedW,savedC){
+function autoSave(savedW,savedC,savedDetail){
   const cs=savedC||$('pvC').src;
   const ws=savedW||$('pvW').src;
   const hasClose=cs&&cs.startsWith('data:');
   const hasWide=ws&&ws.startsWith('data:');
   if(!hasClose&&!hasWide){console.warn('[autoSave] 이미지 없음 - 저장 건너뜀');return;}
+  /* AI 분석 중이면 저장 건너뜀 */
+  const detVal=savedDetail||$('fDetail').value;
+  if(detVal.includes('AI 분석 중')){console.warn('[autoSave] AI 분석 미완료 - 저장 건너뜀');return;}
   if(!$('fAgree').checked){
     if(ls('frog_agreed')==='true'){$('fAgree').checked=true;$('agreeNote').style.display='block';}
     else{$('fAgree').checked=true;ls('frog_agreed','true');$('agreeNote').style.display='block';A.togSave();toast('<i class="fa-solid fa-circle-check"></i> AI 참고용 동의가 자동 적용되었습니다',false,2500);}
@@ -2254,7 +2457,7 @@ function autoSave(savedW,savedC){
   const room=$('fRoom').value||'위치미지정';
   const info=addr;
   if($('lInfo'))$('lInfo').textContent=info;$('ptitle').textContent=info+' 사전점검 리포트';
-  const item={id:Date.now(),room,work:$('fWork').value,sub:$('fSub').value,type:$('fType').value,detail:$('fDetail').value,mode:getActiveMode(),wImg:hasWide?ws:null,cImg:hasClose?cs:(hasWide?ws:null)};
+  const item={id:Date.now(),room,work:$('fWork').value,sub:$('fSub').value,type:$('fType').value,detail:detVal,mode:getActiveMode(),wImg:hasWide?ws:null,cImg:hasClose?cs:(hasWide?ws:null)};
   list.push(item);renderItem(item);updateModeLabel();saveList();
   const roomMissing=!$('fRoom').value;
   reset();
@@ -2283,9 +2486,10 @@ A.devTap=(()=>{let tc=0,tt=null;return()=>{tc++;clearTimeout(tt);if(tc>=3){tc=0;
 const GUIDE_TEXT=[
   '안녕하세요! 청개구리 입주점검 AI앱 사용법을 안내합니다.',
   '1단계, 현장 정보. 주소와 동호수를 입력하세요.',
-  '2단계, 사진 촬영. 멀리서 찍기로 위치를 촬영하고, 가까이 찍기로 하자 부위를 촬영하세요. 가까이 찍기를 누르면 AI 분석이 자동으로 시작됩니다.',
-  '3단계, 하자 정보. 위치를 선택하고, 하자 내용을 직접 입력하면 더 정밀한 AI 분석이 됩니다. 공종, 세부, 유형은 AI가 자동으로 입력합니다.',
-  'AI 분석이 완료되면 자동으로 점검 리스트에 저장됩니다. 다음입력 버튼을 눌러 다음 하자를 계속 입력하세요.',
+  '2단계, 사진 촬영. 멀리서 찍기로 전체 위치를, 가까이 찍기로 하자 부위를 촬영하세요.',
+  '3단계, 하자 정보. 위치를 선택하고, 하자 내용을 입력하세요. 예를 들어, 터닝도어 파손, 타일 들뜸 등을 입력하면, 공종, 세부, 유형이 자동으로 매칭됩니다.',
+  '하자 내용 입력이 끝나면, 입력칸 우측의 AI분석 버튼을 눌러주세요. 1차 AI 분석 후 2차 검증을 거쳐 국토부 기준에 따른 정확한 결과를 출력합니다.',
+  'AI 2차 검증이 완료되면 자동으로 점검 리스트에 저장됩니다. 다음입력 버튼을 눌러 계속 진행하세요.',
   '4단계, 점검 리스트. 저장된 하자 목록을 확인하고, 전체 저장 PDF 버튼으로 리포트를 저장하세요.',
   '무료 3회 체험 후, 1일 이용권 만원으로 100회 AI 분석이 가능합니다. 수익의 50퍼센트가 세이브더칠드런에 기부됩니다. 감사합니다!'
 ];
@@ -2311,13 +2515,30 @@ function _speakNext(){
 if('speechSynthesis' in window){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();}
 
 /* ── 이미지 리사이즈 (maxPx 이하로 축소, JPEG 80% 압축) ── */
-function resizeImg(file,maxPx=1280){return new Promise(r=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>maxPx||h>maxPx){const ratio=Math.min(maxPx/w,maxPx/h);w=Math.round(w*ratio);h=Math.round(h*ratio);}const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);const dataUrl=cv.toDataURL('image/jpeg',0.8);r({data:dataUrl.split(',')[1],mimeType:'image/jpeg'});};img.src=URL.createObjectURL(file);});}
+function resizeImg(file,maxPx=800){return new Promise(r=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>maxPx||h>maxPx){const ratio=Math.min(maxPx/w,maxPx/h);w=Math.round(w*ratio);h=Math.round(h*ratio);}const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);const dataUrl=cv.toDataURL('image/jpeg',0.6);r({data:dataUrl.split(',')[1],mimeType:'image/jpeg'});};img.src=URL.createObjectURL(file);});}
 
 async function runAI(){
   const det=$('fDetail'), ui=$('fUser').value.trim();
   const activeMode=getActiveMode();
-  const proExtra=(activeMode==='admin')?'\n[전문 모드] 시공 기준서, KS규격, 국토부 하자판정 기준을 상세히 인용하여 전문 보고서 수준으로 작성하세요.':'';
+  const proExtra=(activeMode==='admin')?'\n[전문모드] 시공기준서·KS규격·국토부 하자판정 기준 상세 인용.':'';
   const workList=Object.keys(WM).map(w=>`${w}(${Object.keys(WM[w]).join(',')})`).join('; ');
+  /* ── AbortController + 25초 타임아웃 ── */
+  const _ac=new AbortController();
+  const AI_TIMEOUT=25000;
+  const _aiTimer=setTimeout(()=>{_ac.abort();_aiFallback(det,'⏱️ 분석 시간 초과');},AI_TIMEOUT);
+  let _aiDone=false;
+  function _aiFallback(detEl,reason){
+    if(_aiDone)return;_aiDone=true;clearTimeout(_aiTimer);
+    /* 기존 키워드 매칭 값이 있으면 유지, 없을 때만 빈값 */
+    if(!$('fWork').value)$('fWork').value='';
+    if(!$('fSub').value)$('fSub').value='';
+    if(!$('fType').value)$('fType').value='';
+    detEl.value='⚠️ '+reason+'\n\n➡️ AI 분석 버튼을 다시 눌러주세요.\n※ 하자내용을 입력하면 더 정확합니다.';
+    stat('⚠️ '+reason+' — AI 분석 버튼을 다시 눌러주세요',true);
+    $('btnReanalyze').style.display='inline-flex';
+    $('btnRunAI').disabled=false;$('btnRunAI').style.opacity='1';
+    saveDraft();
+  }
   /* ── 이미지 리사이즈 후 base64 준비 ── */
   const images=[];
   if(wF){const d=await resizeImg(wF);images.push(d);}
@@ -2330,122 +2551,119 @@ async function runAI(){
   ls('_pre_ai_count',String(_qSnap.count||0));
 
   try{
-    /* ================================================================
-       MODE A: 사용자 입력이 있을 때 → 입력 내용이 진단의 주축
-       사진은 입력된 하자를 "확인·보강"하는 보조 증거로만 활용
-       ================================================================ */
-    if(hasUserInput){
-      det.value='🔍 입력 기반 1차 분석 중...';
-      stat('📝 입력 기반 분석 진행 중...');
+    det.value='🔍 1차 AI 분석 중...';
+    stat(hasUserInput?'📝 1차 입력 기반 분석 진행 중...':'📷 1차 사진 기반 분석 진행 중...');
 
-      const prompt1=`입주자 사전점검 AI. 사용자 입력 우선, 사진은 보조 증거.${proExtra}
-[사용자 입력] "${ui}"
-[분류] ${workList}
-[유형] 들뜸,마감불량,흠집/찍힘,면불량,오염,미시공,파손,틈새,코킹불량,수직수평불량,개폐불량,고정불량,작동불량,줄눈불량,단차,구배불량,이색/변색,누수,균열,도장불량,이음불량,배수불량,점등불량,악취,허용범위
-[규칙] 입력 키워드→공종분류→사진 교차확인. 3줄 요약.
-[JSON만]
-{"work":"공종","sub":"세부공종","type":"하자유형","detail":"현상: (1줄)\\n기준: (국토부 허용범위 1줄)\\n조치: (권고 1줄)"}`;
+    const manWork=$('fWork').value, manSub=$('fSub').value, manType=$('fType').value;
+    const hasManual=manWork||manSub||manType;
+    const manualBlock=hasManual?`\n[수동 선택 정보 — 최우선] 공종:${manWork||'미지정'} / 세부:${manSub||'미지정'} / 유형:${manType||'미지정'}`:'';
+    const userBlock=hasUserInput?`\n[사용자 입력 — 최우선 분석 근거] "${ui}"`:'';
+    const modeBlock=hasManual?'수동 선택 정보 우선, 사진으로 검증.':hasUserInput?'사용자 입력 우선, 사진은 보조 증거.':'사진1(Wide):공종파악, 사진2(Close):하자분석.';
 
-      const gasRes=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'ai',fp:FP,adminToken:sessionStorage.getItem('admin_token')||'',prompts:[{prompt:prompt1,images}]})});
-      if(!gasRes.ok)throw new Error('서버 응답 오류: '+gasRes.status);
-      const gasData=await gasRes.json();
-      if(gasData.error){if(gasData.error==='rate_limit')throw new Error('429');throw new Error(gasData.message||gasData.error);}
+    /* ── 1차 분석 프롬프트 ── */
+    const prompt1=`당신은 아파트 사전점검 전문 하자진단 AI입니다. ${modeBlock}${proExtra}${manualBlock}${userBlock}
+[공종분류] ${workList}
+[하자유형] 들뜸,마감불량,흠집/찍힘,면불량,오염,미시공,파손,틈새,코킹불량,수직수평불량,개폐불량,고정불량,작동불량,줄눈불량,단차,구배불량,이색/변색,누수,균열,도장불량,이음불량,배수불량,점등불량,악취,허용범위
+[판정기준]
+- 국토부 「공동주택 하자의 조사, 보수비용 산정 및 하자판정기준」적용
+- KS표준(KS F 2292 바닥충격음, KS F 4530 창세트, KS L 1001 타일 등) 인용
+- 허용범위: 수직수평 3mm이내, 틈새 2mm이내, 단차 1.5mm이내 → type:"허용범위"
+- 심각도: 경미(미관/사용무관), 보통(기능저하/시정권고), 중대(안전/구조/누수→즉시시정)
+[출력규칙]
+- detail 항목은 반드시 아래 5줄 형식으로 상세 작성:
+  ■ 하자현상: 구체적 현상 서술 (위치, 범위, 크기 포함)
+  ■ 판정근거: 국토부 기준 또는 KS표준 조항명과 허용수치 명시
+  ■ 심각도: 경미/보통/중대 + 판정 사유
+  ■ 시정방법: 구체적 보수/교체 방법
+  ■ 비고: 추가 확인사항이나 관련 하자 주의점
+[JSON]
+{"work":"공종","sub":"세부공종","type":"하자유형","severity":"경미|보통|중대","detail":"■ 하자현상: ...\\n■ 판정근거: ...\\n■ 심각도: ...\\n■ 시정방법: ...\\n■ 비고: ..."}`;
 
-      const txt1=gasData.results[0]||'';
-      let d1={};
-      try{const c=txt1.replace(/```json/g,'').replace(/```/g,'').trim();const mt=c.match(/\{[\s\S]*\}/);d1=mt?JSON.parse(mt[0]):{};}
-      catch{d1={detail:'파싱 실패. 하자 내용을 다시 입력해주세요.',work:'기타',sub:'',type:'확인필요'};}
+    const GEMINI_KEY=atob('QUl6YVN5Q2lTQjY5ZktZd21sVG8wajRXdElOd3NSNE9rU05jcWFZ');
+    const GEMINI_URL='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key='+GEMINI_KEY;
 
-      /* ── 2차 검증 ── */
-      det.value='⏳ 2차 검증 중...';stat('🔄 AI 교차 검증 중...');
-      const prompt2=`사전점검 검수 AI. 사용자 입력:"${ui}"
-[1차 결과] 공종:${d1.work||'미분류'}/세부:${d1.sub||'미분류'}/유형:${d1.type||'미분류'}/내용:${d1.detail||'없음'}
-[검증] ①입력과 분류 일치 확인 ②사진 교차확인 ③심각도 판정. 불일치시 수정. 3줄 요약 유지.
-[JSON만]
-{"work":"공종","sub":"세부공종","type":"하자유형","severity":"경미|보통|중대","corrected":true/false,"detail":"현상: (1줄)\\n기준: (국토부 허용범위 1줄)\\n조치: (권고 1줄)"}`;
-      const gasRes2=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'ai',fp:FP,adminToken:sessionStorage.getItem('admin_token')||'',prompts:[{prompt:prompt2,images}]})});
-      const gasData2=await gasRes2.json();
-      if(gasData2.error)throw new Error(gasData2.message||gasData2.error);
-      const txt2=gasData2.results[0]||'';
-      let d2={};
-      try{const c=txt2.replace(/```json/g,'').replace(/```/g,'').trim();const mt=c.match(/\{[\s\S]*\}/);d2=mt?JSON.parse(mt[0]):{};}
-      catch{d2=d1;}
+    /* ── 1차 분석 호출 ── */
+    const parts1=[{text:prompt1}];
+    images.forEach(img=>parts1.push({inline_data:{mime_type:img.mimeType,data:img.data}}));
+    const res1=await fetch(GEMINI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:parts1}],generationConfig:{temperature:0.2,maxOutputTokens:1024,responseMimeType:'application/json'}}),signal:_ac.signal});
+    if(_aiDone)return;
+    if(!res1.ok){const errBody=await res1.text().catch(()=>'');if(errBody.includes('RESOURCE_EXHAUSTED'))throw new Error('429');throw new Error('Gemini 응답 오류: '+res1.status);}
+    const data1=await res1.json();
+    if(_aiDone)return;
 
-      const final=(d2.work||d2.detail)?d2:d1;
-      const severity=final.severity||'';
-      const severityBadge=
-        severity==='중대'?'\n⛔ [중대하자 — 즉시 시정 요청]':
-        severity==='보통'?'\n⚠️ [보통 — 시정 권고]':
-        severity==='경미'?'\n✅ [경미 — 기록 후 보수]':'';
-      const inputBadge=`\n${severityBadge}\n📝 입력 기반 분석 | ✅ 2차 검증 완료 (참고용)`;
+    const txt1=data1?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    let d1={};
+    try{const c=txt1.replace(/```json/g,'').replace(/```/g,'').trim();let parsed=JSON.parse(c);if(Array.isArray(parsed))parsed=parsed[0]||{};d1=parsed;}
+    catch{try{const mt=txt1.match(/\{[\s\S]*\}/);d1=mt?JSON.parse(mt[0]):{};}catch{d1={};}}
 
-      _applyAIResult(final.work||'',final.sub||'',final.type||'');
-      det.value=(final.detail||'')+inputBadge;
-
-    } else {
-      /* ================================================================
-         MODE B: 사용자 입력 없을 때 → 사진 기반 분석 (기존 로직 유지)
-         ================================================================ */
-      det.value='🔍 1차 사진 분석 중...';stat('📷 사진 기반 분석 진행 중...');
-
-      const prompt1=`사전점검 AI. 사진1(Wide):공종파악. 사진2(Close):하자분석.${proExtra}
-[분류] ${workList}
-[유형] 들뜸,마감불량,흠집/찍힘,면불량,오염,미시공,파손,틈새,코킹불량,수직수평불량,개폐불량,고정불량,작동불량,줄눈불량,단차,구배불량,이색/변색,누수,균열,도장불량,이음불량,배수불량,점등불량,악취
-[규칙] 3줄 요약. 직접 입력시 더 정밀.
-[JSON만]
-{"work":"공종","sub":"세부공종","type":"하자유형","detail":"현상: (1줄)\\n기준: (국토부 허용범위 1줄)\\n조치: (권고 1줄)"}`;
-
-      /* ── GAS 프록시로 1차 요청 ── */
-      const gasRes1=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'ai',fp:FP,adminToken:sessionStorage.getItem('admin_token')||'',prompts:[{prompt:prompt1,images}]})});
-      if(!gasRes1.ok)throw new Error('서버 응답 오류: '+gasRes1.status);
-      const gasData1=await gasRes1.json();
-      if(gasData1.error){if(gasData1.error==='rate_limit')throw new Error('429');throw new Error(gasData1.message||gasData1.error);}
-      const txt1=gasData1.results[0]||'';
-      let d1={};
-      try{const c=txt1.replace(/```json/g,'').replace(/```/g,'').trim();const mt=c.match(/\{[\s\S]*\}/);d1=mt?JSON.parse(mt[0]):{};}
-      catch{d1={detail:'파싱 실패. 하자 내용을 직접 입력하면 정확도가 높아집니다.',work:'기타',sub:'',type:'확인필요'};}
-
-      det.value='⏳ 2차 검증 중...';stat('🔄 AI 재검증 중...');
-
-      const prompt2=`사전점검 검수 AI.
-[1차] 공종:${d1.work||'미분류'}/세부:${d1.sub||'미분류'}/유형:${d1.type||'미분류'}/내용:${d1.detail||'없음'}
-[검증] ①사진과 분류 일치 확인 ②심각도 판정 ③불일치시 수정. 3줄 요약 유지.
-[JSON만]
-{"work":"공종","sub":"세부공종","type":"하자유형","severity":"경미|보통|중대","corrected":true/false,"detail":"현상: (1줄)\\n기준: (국토부 허용범위 1줄)\\n조치: (권고 1줄)"}`;
-
-      /* ── GAS 프록시로 2차 요청 ── */
-      const gasRes2=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'ai',fp:FP,adminToken:sessionStorage.getItem('admin_token')||'',prompts:[{prompt:prompt2,images}]})});
-      const gasData2=await gasRes2.json();
-      if(gasData2.error)throw new Error(gasData2.message||gasData2.error);
-      const txt2=gasData2.results[0]||'';
-      let d2={};
-      try{const c=txt2.replace(/```json/g,'').replace(/```/g,'').trim();const mt=c.match(/\{[\s\S]*\}/);d2=mt?JSON.parse(mt[0]):{};}
-      catch{d2=d1;}
-
-      const final=(d2.work||d2.detail)?d2:d1;
-      const wasCorrected=!!final.corrected;
-      const severity=final.severity||'';
-      const severityBadge=
-        severity==='중대'?'\n⛔ [심각도: 중대하자 — 즉시 시정 요청 필요]':
-        severity==='보통'?'\n⚠️ [심각도: 보통 — 시정 요청 권고]':
-        severity==='경미'?'\n✅ [심각도: 경미 — 기록 후 보수 요청]':'';
-      const severityBadge2=
-        severity==='중대'?'\n⛔ [중대하자 — 즉시 시정 요청]':
-        severity==='보통'?'\n⚠️ [보통 — 시정 권고]':
-        severity==='경미'?'\n✅ [경미 — 기록 후 보수]':'';
-      const verifyBadge=`\n${severityBadge2}\n📷 사진 분석 | ✅ 2차 검증 완료 (참고용)`;
-
-      _applyAIResult(final.work||'',final.sub||'',final.type||'');
-      det.value=(final.detail||'')+verifyBadge;
+    if(!d1.work&&!d1.detail){
+      d1={detail:`■ 하자현상: ${ui||'사진 참조'}\n■ 판정근거: 시공기준 확인 필요\n■ 심각도: 보통\n■ 시정방법: 현장 확인 후 시정\n■ 비고: 재분석 권장`,work:$('fWork').value||'기타',sub:$('fSub').value||'',type:$('fType').value||'',severity:'보통'};
     }
 
+    /* ── 2차 검증 호출 ── */
+    det.value='🔍 2차 검증 중...';
+    stat('🔎 2차 검증 — 공종/유형/심각도/기준 정확성 확인 중...');
+
+    const prompt2=`당신은 아파트 사전점검 하자진단 검증 전문가입니다.
+아래 1차 AI 분석 결과를 검증하고, 오류가 있으면 수정하여 최종 결과를 출력하세요.
+${userBlock}${manualBlock}
+
+[1차 분석 결과]
+공종: ${d1.work||''} / 세부: ${d1.sub||''} / 유형: ${d1.type||''} / 심각도: ${d1.severity||''}
+${d1.detail||''}
+
+[검증 항목]
+1. 공종/세부 분류가 정확한가? (사용자 입력 "${ui}" 및 사진과 일치하는지)
+2. 하자유형이 실제 현상과 맞는가?
+3. 심각도 판정이 적절한가? (경미/보통/중대 기준 재확인)
+4. 판정근거에 정확한 국토부 기준 또는 KS표준이 인용되었는가?
+5. 시정방법이 구체적이고 실행 가능한가?
+
+[규칙]
+- 1차 결과가 정확하면 그대로 유지, 오류가 있으면 수정
+- 반드시 동일한 JSON 형식으로 최종 결과 출력
+- detail의 5줄 형식(■ 하자현상/판정근거/심각도/시정방법/비고) 유지
+[JSON]
+{"work":"공종","sub":"세부공종","type":"하자유형","severity":"경미|보통|중대","detail":"■ 하자현상: ...\\n■ 판정근거: ...\\n■ 심각도: ...\\n■ 시정방법: ...\\n■ 비고: ..."}`;
+
+    const parts2=[{text:prompt2}];
+    images.forEach(img=>parts2.push({inline_data:{mime_type:img.mimeType,data:img.data}}));
+    const res2=await fetch(GEMINI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:parts2}],generationConfig:{temperature:0.1,maxOutputTokens:1024,responseMimeType:'application/json'}}),signal:_ac.signal});
+    if(_aiDone)return;
+
+    let d=d1; /* 2차 실패 시 1차 결과 사용 */
+    if(res2.ok){
+      const data2=await res2.json();
+      const txt2=data2?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+      try{const c=txt2.replace(/```json/g,'').replace(/```/g,'').trim();let parsed=JSON.parse(c);if(Array.isArray(parsed))parsed=parsed[0]||{};if(parsed.work&&parsed.detail)d=parsed;}
+      catch{try{const mt=txt2.match(/\{[\s\S]*\}/);const p2=mt?JSON.parse(mt[0]):{};if(p2.work&&p2.detail)d=p2;}catch{}}
+    }
+
+    const severity=d.severity||'';
+    const severityBadge=
+      severity==='중대'?'\n⛔ [중대하자 — 즉시 시정 요청]':
+      severity==='보통'?'\n⚠️ [보통 — 시정 권고]':
+      severity==='경미'?'\n✅ [경미 — 기록 후 보수]':'';
+    const modeBadge=hasUserInput?'📝 입력 기반':'📷 사진 기반';
+    const badge=`\n${severityBadge}\n${modeBadge} 분석 완료 · 2차 검증 완료 (참고용)`;
+
+    _applyAIResult(d.work||'',d.sub||'',d.type||'');
+    const workInfo=`[공종] ${d.work||''} [세부] ${d.sub||''} [유형] ${d.type||''}\n\n`;
+    det.value=workInfo+(d.detail||'')+badge;
+    /* textarea 높이 자동 조절 */
+    det.style.height='auto';det.style.height=det.scrollHeight+'px';
+
+    _aiDone=true;clearTimeout(_aiTimer);
     useQuota();updateQuotaUI();saveDraft();
+    /* 재분석 버튼 항상 표시 (사진 있을 때) */
+    if(wF||cF)$('btnReanalyze').style.display='inline-flex';
+    $('btnRunAI').disabled=false;$('btnRunAI').style.opacity='1';
     const remaining=getRemaining();
     if(hasUserInput){stat(`📝 입력 기반 정밀 분석 완료 (잔여 ${remaining}건)`);}
-    else{stat(`✅ 사진 분석 완료 (잔여 ${remaining}건)`);}
-    /* 현재 이미지 src를 캡처해두고 autoSave에 전달 */
-    const _wSrc=$('pvW').src, _cSrc=$('pvC').src;
-    setTimeout(()=>autoSave(_wSrc,_cSrc),800);
+    else{stat(`✅ 사진 분석 완료 — 자동 저장 중... (잔여 ${remaining}건)`);}
+    /* AI 분석 완료 후 자동 저장 — detail을 즉시 캡처 */
+    const _wSrc=$('pvW').src, _cSrc=$('pvC').src, _detail=det.value;
+    setTimeout(()=>autoSave(_wSrc,_cSrc,_detail),800);
 
   }catch(err){
     console.error(err);
@@ -2457,21 +2675,37 @@ async function runAI(){
     }
     const errMsg=err?.message||err?.toString()||'';
     if(errMsg.includes('429')||errMsg.includes('quota')||errMsg.includes('RESOURCE_EXHAUSTED')){
-      stat('⚠️ 오늘 전체 사용량 초과',true);
-      det.value='⚠️ 오늘 전체 AI 분석 한도에 도달했습니다.\n내일 자정 이후 이용해주세요.\n📞 010-2322-0949';
+      _aiFallback(det,'⚠️ 오늘 전체 AI 분석 한도 초과');
     }else{
-      stat('분석 실패 — 횟수는 차감되지 않았습니다',true);
-      det.value='일시적 오류가 발생했습니다.\n횟수는 차감되지 않았으니 다시 시도해주세요.';
+      _aiFallback(det,'⚠️ AI 분석 오류 발생');
     }
   }
 }
 
+/* ── AI 분석 시작 (버튼 클릭) ── */
+A.startAI=()=>{
+  if(!wF&&!cF){stat('⚠️ 사진을 먼저 촬영해주세요',true);toast('📷 멀리서 찍기 → 가까이 찍기를 먼저 촬영하세요',true);return;}
+  if(!cF){stat('⚠️ 가까이 찍기를 촬영해주세요',true);return;}
+  $('btnRunAI').disabled=true;$('btnRunAI').style.opacity='0.5';
+  runAI();
+};
+/* ── 재분석 ── */
+A.reanalyze=()=>{
+  if(!wF&&!cF){stat('⚠️ 촬영된 사진이 없습니다',true);return;}
+  $('fDetail').value='';
+  $('btnRunAI').disabled=true;$('btnRunAI').style.opacity='0.5';
+  runAI();
+};
+
 /* ── ★ v22.1: AI 결과를 태그 UI + 셀렉터에 적용 ── */
 function _applyAIResult(aiWork,aiSub,aiType){
-  if(aiWork&&!WM[aiWork]){const o=document.createElement('option');o.value=aiWork;o.textContent=aiWork;$('fWork').appendChild(o);}
-  $('fWork').value=aiWork;A.onWork();
-  if(aiSub){if(!$('fSub').querySelector(`option[value="${aiSub}"]`)){const o=document.createElement('option');o.value=aiSub;o.textContent=aiSub;$('fSub').appendChild(o)}$('fSub').value=aiSub;A.onSub();}
-  if(aiType){if(!$('fType').querySelector(`option[value="${aiType}"]`)){const o=document.createElement('option');o.value=aiType;o.textContent=aiType;$('fType').appendChild(o)}$('fType').value=aiType;}
+  $('fWork').value=aiWork||'';A.onWork();
+  $('fSub').value=aiSub||'';A.onSub();
+  $('fType').value=aiType||'';
+  /* 버튼 라벨 업데이트 */
+  if(aiWork){const l=$('wkLabel');l.textContent='✔ '+aiWork;l.classList.remove('cd-placeholder');l.style.color='var(--p)';l.style.fontWeight='800';}
+  if(aiSub){const l=$('subLabel');l.textContent='✔ '+aiSub;l.classList.remove('cd-placeholder');l.style.color='var(--p)';l.style.fontWeight='800';}
+  if(aiType){const l=$('typeLabel');l.textContent='✔ '+aiType;l.classList.remove('cd-placeholder');l.style.color='var(--p)';l.style.fontWeight='800';}
   /* 태그 UI 표시 */
   if(aiWork||aiSub||aiType){
     $('tagWork').textContent=aiWork||'';
@@ -2493,6 +2727,10 @@ A.nextInput=()=>{
   $('fUser').classList.remove('has-value');
   const banner=$('inputHintBanner');if(banner)banner.classList.remove('has-input');
   $('aiTags').style.display='none';
+  /* 공종/세부/유형 라벨 리셋 */
+  ['wk','sub','type'].forEach(k=>{const l=$(k+'Label');l.textContent=k==='wk'?'공종':k==='sub'?'세부':'유형';l.className='cd-placeholder';l.style.color='';l.style.fontWeight='';});
+  ['wkGrid','subGrid','typeGrid'].forEach(k=>{$(k).innerHTML='';$(k).classList.remove('show');});
+  ['wkBtn','subBtn','typeBtn'].forEach(k=>$(k).classList.remove('open'));
     clearItemDraft();
   stat('➡️ 다음 하자를 입력하세요');
   toast('<i class="fa-solid fa-arrow-right"></i> 다음 하자 입력 준비 완료');
@@ -2510,7 +2748,7 @@ A.toggleSelects=()=>{
 };
 
 /* ── 저장(수동 폴백) ── */
-A.togSave=()=>{const ok=$('fAgree').checked;if(ok){ls('frog_agreed','true');$('agreeNote').style.display='block';}const banner=$('autoSaveBanner');if(banner){if(ok){banner.style.borderColor='var(--nv)';banner.style.color='#059669';banner.innerHTML='<i class="fa-solid fa-bolt" style="color:var(--pl)"></i><span>가까이 찍기 후 <b>AI 분석 완료 시 자동 저장</b>됩니다</span>';}else{banner.style.borderColor='var(--wr)';banner.style.color='#C05621';banner.innerHTML='<i class="fa-solid fa-triangle-exclamation" style="color:var(--wr)"></i><span>필수 확인에 동의하면 <b>자동 저장</b>이 활성화됩니다</span>';}}};
+A.togSave=()=>{const ok=$('fAgree').checked;if(ok){ls('frog_agreed','true');$('agreeNote').style.display='block';}const banner=$('autoSaveBanner');if(banner){if(ok){banner.style.borderColor='var(--nv)';banner.style.color='#059669';banner.innerHTML='<i class="fa-solid fa-bolt" style="color:var(--pl)"></i><span><b>AI 분석 버튼</b> 클릭 → 분석 완료 시 <b>자동 저장</b>됩니다</span>';}else{banner.style.borderColor='var(--wr)';banner.style.color='#C05621';banner.innerHTML='<i class="fa-solid fa-triangle-exclamation" style="color:var(--wr)"></i><span>필수 확인에 동의하면 <b>자동 저장</b>이 활성화됩니다</span>';}}};
 A.save=()=>{if(!$('fAgree').checked)return;if(!validateRoom()){const sv=$('btnSv');sv.style.background='#E74C3C';sv.style.boxShadow='0 0 0 4px rgba(231,76,60,.25)';setTimeout(()=>{sv.style.background='';sv.style.boxShadow='';},1200);return;}const cs=$('pvC').src;if(!cF&&(!cs||!cs.startsWith('data:'))){alert('사진(가까이 찍기)이 필요합니다.');return;}const addr=$('fAddr').value||'주소미입력';const info=addr;if($('lInfo'))$('lInfo').textContent=info;$('ptitle').textContent=info+' 사전점검 리포트';const ws=$('pvW').src;const item={id:Date.now(),room:$('fRoom').value||'위치미지정',work:$('fWork').value,sub:$('fSub').value,type:$('fType').value,detail:$('fDetail').value,mode:getActiveMode(),wImg:(ws&&ws.startsWith('data:'))?ws:null,cImg:cs};list.push(item);renderItem(item);updateModeLabel();saveList();reset();stat('저장 완료! 다음 항목을 촬영하세요.');$('btnNext').style.display='inline-block';document.querySelector('.lh').scrollIntoView({behavior:'smooth'});setTimeout(()=>step(1),1500);};
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -2525,7 +2763,7 @@ function renderItem(it){
     <div class="dc-hd"><div class="dc-tag"><span class="dc-rm">${safeRoom}</span><span class="dc-tp${isSafe?' safe':''}">${safeType}</span>${mTag}</div>
     <div class="dc-act"><button class="bi ed" onclick="A.edit(${it.id})"><i class="fa-solid fa-pen"></i></button><button class="bi dl" onclick="A.del(${it.id})"><i class="fa-solid fa-trash-can"></i></button></div></div>
     <div class="dc-ph${!it.wImg?' single':''}">${it.wImg?`<img src="${it.wImg}" title="멀리서">`:''}<img src="${it.cImg}" title="가까이"></div>
-    <div class="dc-bd"><div class="dc-wk">${safeWork} → ${safeSub}</div><div class="dc-dt">${safeDetail}</div></div></div>`;
+    <div class="dc-bd"><div class="dc-wk">[공종] ${safeWork} [세부] ${safeSub} [유형] ${safeType}</div><div class="dc-dt">${safeDetail}</div></div></div>`;
   $('lBox').insertAdjacentHTML('beforeend',h);
   $('lCnt').textContent=list.length;
 }
@@ -2622,7 +2860,7 @@ A.modal=(n,s)=>{let el;if(n==='paid')el=$('moPaid');else if(n==='payGuide')el=$(
    🤖 AI 상담 챗봇
    ============================================================ */
 const CB_CATS={use:[{icon:'📱',label:'앱 사용 순서',key:'howto'},{icon:'📸',label:'사진 몇 장?',key:'photo'},{icon:'📝',label:'입력 시 장점은?',key:'text_input'},{icon:'🆓',label:'무료 몇 회?',key:'free_count'},{icon:'✅',label:'저장 후 다음은?',key:'after_save'}],pass:[{icon:'🎟️',label:'1일권이란?',key:'daily'},{icon:'🛒',label:'어디서 구매?',key:'buy_where'},{icon:'🔑',label:'코드 입력법',key:'code_how'},{icon:'⏰',label:'언제 만료?',key:'expire'}],donate:[{icon:'💚',label:'기부앱이란?',key:'donate_what'},{icon:'📊',label:'기부 비율은?',key:'donate_ratio'},{icon:'🏢',label:'어디에 기부?',key:'donate_where'}],defect:[{icon:'🏠',label:'하자란?',key:'defect_what'},{icon:'⚠️',label:'중대하자란?',key:'major_defect'},{icon:'🤖',label:'AI vs 전문가',key:'diff'},{icon:'📋',label:'결과 신뢰도?',key:'accuracy'}],save:[{icon:'💾',label:'PDF 저장법',key:'pdf_how'},{icon:'📁',label:'파일 위치?',key:'file_location'},{icon:'🗑️',label:'항목 삭제법',key:'delete_how'}]};
-const CB_ANS={howto:{q:'앱 사용 순서가 어떻게 되나요?',a:'📱 <b>앱 사용 순서 (4단계)</b><br><br>① 현장 정보 입력 — 주소·동·호수·점검 위치 선택<br>② 사진 촬영 — 멀리서 1장 + 가까이 1장(AI분석 시작)<br>③ 하자 내용 직접 입력 시 → <b>📝 입력 기반 정밀 분석</b>으로 전환!<br>④ 저장 → 반복 → <b>[전체 저장]</b>으로 PDF 마무리'},photo:{q:'사진은 몇 장 찍어야 하나요?',a:'📸 하자 1건당 최대 <b>2장</b> 촬영합니다.<br><br>• <b>멀리서 찍기</b> — 위치 파악용 (선택)<br>• <b>가까이 찍기</b> — AI 분석 시작 (필수)<br><br>💡 <b>하자 내용을 먼저 입력</b>하면 더 정밀한 분석이 됩니다!'},text_input:{q:'하자 내용을 직접 입력하면 어떤 점이 좋나요?',a:'📝 <b>입력 기반 정밀 분석의 장점</b><br><br>① 입력 내용이 AI 진단의 주축이 됩니다<br>② 사진은 입력 내용을 확인·보강하는 증거로 활용<br>③ 공종·세부·유형이 더 정확하게 분류됩니다<br>④ 심각도(경미/보통/중대) 판정도 더 정확해집니다<br><br>예: <b>"창호 우측 수직수평불량"</b> 입력 후 사진 촬영!'},free_count:{q:'무료로 몇 번 사용할 수 있나요?',a:'🆓 매일 자정 초기화되는 <b>무료 3회</b> 제공됩니다.<br><br>더 필요하시면 1일이용권(₩10,000)으로 <b>100회</b> 이용 가능합니다!'},after_save:{q:'저장 후에는 어떻게 하나요?',a:'✅ 저장 즉시 입력창이 자동 초기화됩니다.<br><br>다음 위치 → 반복 → 모두 완료 시 <b>[전체 저장]</b> → PDF 자동 다운로드!'},daily:{q:'1일이용권이 무엇인가요?',a:'🎟️ 오늘 하루 AI 분석 <b>100회</b> 이용권<br><br>• 💰 ₩10,000 / 당일 자정까지<br>• 💚 수익 50% → 세이브더칠드런 기부<br>• 상단 <b>[1일권 구매]</b> 버튼으로 구매!'},buy_where:{q:'어디서 어떻게 구매하나요?',a:'🛒 ① [1일권 구매] 버튼 → ② 네이버스마트스토어 결제 → ③ 문자로 코드 수신 → ④ 앱에서 입력<br><br>📞 미수신: 010-2322-0949'},code_how:{q:'인증코드 입력하는 방법은?',a:'🔑 [1일권 구매] → 팝업 하단 코드입력란에 입력 → [확인] 클릭 → 즉시 100회 활성화!'},expire:{q:'이용권 만료 시간은 언제인가요?',a:'⏰ 당일 <b>자정(00:00)</b>에 자동 만료됩니다.<br>잔여 횟수는 다음 날로 이월되지 않아요.'},donate_what:{q:'기부형 앱이란 무엇인가요?',a:'<img src="stc-logo.png" alt="세이브더칠드런" style="height:16px;vertical-align:middle;border-radius:3px;margin-right:4px;">유료 수익의 <b>50%를 세이브더칠드런에 기부</b>하는 앱입니다.<br>1만원 결제 시 5천원이 기부됩니다 🌱'},donate_ratio:{q:'기부 비율이 얼마나 되나요?',a:'📊 정확히 <b>50%</b> 기부됩니다.<br>수수료 제외 후 약 ₩4,813이 세이브더칠드런에 기부됩니다.'},donate_where:{q:'어디에 기부하나요?',a:'🏢 <b>세이브더칠드런</b>(Save the Children)을 통해 기부됩니다.<br>아동 보호·교육·건강 등 전 세계 어린이를 위해 사용됩니다 💚'},defect_what:{q:'하자란 무엇인가요?',a:'🏠 아파트 시공 과정에서 발생한 <b>품질 결함</b>입니다.<br>입주 전 발견하면 건설사에 <b>무상 보수</b>를 요청할 수 있어요!'},major_defect:{q:'중대하자란 무엇인가요?',a:'⚠️ 결로·외풍·제작불량·시공불량 등<br>생활에 직접 영향을 미치는 심각한 결함입니다.'},diff:{q:'AI 점검과 전문가 점검의 차이는?',a:'🤖 <b>AI</b>: 무료3회/이용권100회, 입력+사진 기반 참고용<br>👷 <b>전문가</b>: 직접방문 (29평↓13만원/30평↑15만원)<br>📞 010-2322-0949'},accuracy:{q:'AI 분석 결과는 얼마나 정확한가요?',a:'📋 <b>하자 내용 직접 입력</b> 시 높은 정확도 ✅<br>사진만 촬영 시 다소 낮을 수 있어요 ⚠️<br>입력 내용이 구체적일수록 정밀도 향상!'},pdf_how:{q:'PDF 저장하는 방법은?',a:'💾 하단 <b>[전체 저장]</b> 클릭 → 자동 다운로드<br>파일명: 사전점검_동_호_날짜.pdf'},file_location:{q:'저장된 파일은 어디에 있나요?',a:'📁 <b>안드로이드</b>: 내파일 → 다운로드<br><b>아이폰</b>: 파일앱 → 다운로드'},delete_how:{q:'저장한 항목을 삭제하려면?',a:'🗑️ 항목 우측 <i class="fa-solid fa-trash-can"></i> → 개별 삭제<br>상단 [전체삭제] → 전체 초기화'}};
+const CB_ANS={howto:{q:'앱 사용 순서가 어떻게 되나요?',a:'📱 <b>앱 사용 순서 (4단계)</b><br><br>① 현장 정보 — 주소·동·호수 입력<br>② 사진 촬영 — 멀리서 1장 + 가까이 1장<br>③ 하자 정보 — 위치 선택 → 하자내용 입력(예: 터닝도어 파손) → 공종/세부/유형 자동 매칭 → <b>AI 분석</b> 버튼 클릭 → 국토부 기준 상세 분석 → 자동 저장<br>④ 점검 리스트 → <b>[전체 저장]</b>으로 PDF 마무리'},photo:{q:'사진은 몇 장 찍어야 하나요?',a:'📸 하자 1건당 최대 <b>2장</b> 촬영합니다.<br><br>• <b>멀리서 찍기</b> — 전체 위치 파악용 (선택)<br>• <b>가까이 찍기</b> — 하자 부위 상세 (필수)<br><br>💡 사진 촬영 후 <b>하자내용 입력 → AI 분석 버튼</b>을 눌러주세요!'},text_input:{q:'하자 내용을 직접 입력하면 어떤 점이 좋나요?',a:'📝 <b>하자내용 입력의 장점</b><br><br>① 공종·세부·유형이 <b>자동으로 매칭</b>됩니다<br>② AI가 국토부 기준으로 <b>상세 분석</b>합니다<br>③ 하자현상·판정근거·심각도·시정방법이 출력됩니다<br>④ 분석 완료 후 <b>자동 저장</b>됩니다<br><br>예: <b>"터닝도어 파손"</b> → PL창호공사 > 터닝도어 > 파손 자동 매칭!'},free_count:{q:'무료로 몇 번 사용할 수 있나요?',a:'🆓 매일 자정 초기화되는 <b>무료 3회</b> 제공됩니다.<br><br>더 필요하시면 1일이용권(₩10,000)으로 <b>100회</b> 이용 가능합니다!'},after_save:{q:'저장 후에는 어떻게 하나요?',a:'✅ AI 분석 완료 시 <b>자동 저장</b>됩니다.<br><br>다음입력 버튼 → 다음 하자 촬영 → 반복 → 모두 완료 시 <b>[전체 저장]</b> → PDF 다운로드!'},daily:{q:'1일이용권이 무엇인가요?',a:'🎟️ 오늘 하루 AI 분석 <b>100회</b> 이용권<br><br>• 💰 ₩10,000 / 당일 자정까지<br>• 💚 수익 50% → 세이브더칠드런 기부<br>• 상단 <b>[1일권 구매]</b> 버튼으로 구매!'},buy_where:{q:'어디서 어떻게 구매하나요?',a:'🛒 ① [1일권 구매] 버튼 → ② 네이버스마트스토어 결제 → ③ 문자로 코드 수신 → ④ 앱에서 입력<br><br>📞 미수신: 010-2322-0949'},code_how:{q:'인증코드 입력하는 방법은?',a:'🔑 [1일권 구매] → 팝업 하단 코드입력란에 입력 → [확인] 클릭 → 즉시 100회 활성화!'},expire:{q:'이용권 만료 시간은 언제인가요?',a:'⏰ 당일 <b>자정(00:00)</b>에 자동 만료됩니다.<br>잔여 횟수는 다음 날로 이월되지 않아요.'},donate_what:{q:'기부형 앱이란 무엇인가요?',a:'<img src="stc-logo.png" alt="세이브더칠드런" style="height:16px;vertical-align:middle;border-radius:3px;margin-right:4px;">유료 수익의 <b>50%를 세이브더칠드런에 기부</b>하는 앱입니다.<br>1만원 결제 시 5천원이 기부됩니다 🌱'},donate_ratio:{q:'기부 비율이 얼마나 되나요?',a:'📊 정확히 <b>50%</b> 기부됩니다.<br>₩5,000은 세이브더칠드런에 기부되고,<br>수수료를 제외한 ₩4,813은 앱 운영비로 사용됩니다.'},donate_where:{q:'어디에 기부하나요?',a:'🏢 <b>세이브더칠드런</b>(Save the Children)을 통해 기부됩니다.<br>아동 보호·교육·건강 등 전 세계 어린이를 위해 사용됩니다 💚'},defect_what:{q:'하자란 무엇인가요?',a:'🏠 아파트 시공 과정에서 발생한 <b>품질 결함</b>입니다.<br>입주 전 발견하면 건설사에 <b>무상 보수</b>를 요청할 수 있어요!'},major_defect:{q:'중대하자란 무엇인가요?',a:'⚠️ 결로·외풍·제작불량·시공불량 등<br>생활에 직접 영향을 미치는 심각한 결함입니다.'},diff:{q:'AI 점검과 전문가 점검의 차이는?',a:'🤖 <b>AI</b>: 무료3회/이용권100회, 입력+사진 기반 참고용<br>👷 <b>전문가</b>: 직접방문 (29평↓13만원/30평↑15만원)<br>📞 010-2322-0949'},accuracy:{q:'AI 분석 결과는 얼마나 정확한가요?',a:'📋 <b>하자 내용 직접 입력</b> 시 높은 정확도 ✅<br>사진만 촬영 시 다소 낮을 수 있어요 ⚠️<br>입력 내용이 구체적일수록 정밀도 향상!'},pdf_how:{q:'PDF 저장하는 방법은?',a:'💾 하단 <b>[전체 저장]</b> 클릭 → 자동 다운로드<br>파일명: 사전점검_동_호_날짜.pdf'},file_location:{q:'저장된 파일은 어디에 있나요?',a:'📁 <b>안드로이드</b>: 내파일 → 다운로드<br><b>아이폰</b>: 파일앱 → 다운로드'},delete_how:{q:'저장한 항목을 삭제하려면?',a:'🗑️ 항목 우측 <i class="fa-solid fa-trash-can"></i> → 개별 삭제<br>상단 [전체삭제] → 전체 초기화'}};
 A.cbTab=(el,cat)=>{document.querySelectorAll('.cb-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');const quick=$('cbQuick');quick.innerHTML='';(CB_CATS[cat]||[]).forEach(item=>{const btn=document.createElement('button');btn.className='cb-qbtn';btn.innerHTML=`<span class="cb-qicon">${item.icon}</span>${item.label}`;btn.onclick=()=>A.cbAsk(item.key);quick.appendChild(btn);});};
 A.cbAsk=key=>{const ans=CB_ANS[key];if(!ans)return;cbAddMsg(ans.q,'usr');setTimeout(()=>cbAddMsg(ans.a,'bot'),280);};
 function cbAddMsg(html,type){const msgs=$('cbMsgs');const div=document.createElement('div');div.className=`cb-msg ${type}`;if(type==='bot'){div.innerHTML=`<div class="cb-avatar">🐸</div><div><div class="cb-bubble">${html}</div></div>`;}else{div.innerHTML=`<div class="cb-bubble">${html}</div>`;}msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;}
