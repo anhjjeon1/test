@@ -2036,7 +2036,7 @@ input[type="file"]{
 /* ============================================================
    ★ 설정값
    ============================================================ */
-const APP_VER = 'v27.5';
+const APP_VER = 'v27.6';
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwaGre5b025jL1of_znmu_EVg-CyqnrsAPXlc_nQkmuGHq-LZKhwJb9sDyQTdcUW4i9Pg/exec';
 const SPARE_URL = 'https://anhjjeon1.github.io/inspect-spare/';
 const LIMIT_FREE = 3;
@@ -2073,13 +2073,44 @@ async function spareFailover(){
   if(confirm(msg)){
     if(hasPaid){
       /* spare 앱에 무료 이용 토큰 전달 (URL 파라미터) */
-      const token=btoa(JSON.stringify({paid:true,date:new Date().toDateString(),ts:Date.now()}));
+      /* v27.6: 토큰에 exp(24h TTL) + v(버전) 추가 — 만료·포워딩 악용 방지 */
+      const token=btoa(JSON.stringify({paid:true,date:new Date().toDateString(),ts:Date.now(),exp:Date.now()+24*60*60*1000,v:1}));
       window.location.href=SPARE_URL+'?failover='+encodeURIComponent(token);
     }else{
       window.location.href=SPARE_URL;
     }
   }
 }
+/* v27.6: failover 토큰 수신 → 유료 권한 활성화 (TTL·버전 검증) */
+(function(){
+  try{
+    const params=new URLSearchParams(window.location.search);
+    const token=params.get('failover');
+    if(!token)return;
+    /* URL 즉시 정리 (재사용/공유 방지) */
+    window.history.replaceState({},'',window.location.pathname);
+    const data=JSON.parse(atob(token));
+    const now=Date.now();
+    if(!data||!data.paid){console.warn('[failover] paid 플래그 없음');return;}
+    if(typeof data.ts!=='number'||data.ts>now+60000){console.warn('[failover] ts 이상');return;}
+    if(typeof data.exp==='number'){
+      if(data.exp<=now){
+        setTimeout(()=>alert('⚠️ 이용권 토큰이 만료되었습니다.\n메인 앱에서 다시 시도해주세요.'),300);
+        return;
+      }
+    }else{
+      /* 구버전 토큰 호환: 발행 후 24h TTL */
+      if(now-data.ts>24*60*60*1000){console.warn('[failover] 구버전 24h 초과');return;}
+    }
+    if(data.date&&data.date!==new Date().toDateString()){
+      console.warn('[failover] 날짜 불일치');return;
+    }
+    const today=new Date().toDateString();
+    localStorage.setItem('frog_pass',JSON.stringify({date:today,active:true,type:'paid',code:'FAILOVER',activatedAt:new Date().toISOString(),tokenExp:data.exp||null}));
+    setTimeout(()=>alert('💚 장애 대체 앱입니다.\n이용권이 확인되어 무료 100회가 활성화되었습니다.'),500);
+  }catch(e){console.warn('failover 토큰 파싱 실패:',e);}
+})();
+
 let mode='free';
 window.A={};
 
